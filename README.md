@@ -1,20 +1,20 @@
 <table align="center">
   <tr>
     <td align="center">
-      <img src="assets/terran-wet-gif.gif" width="150" alt="Terran Wet Planet" />
+      <img src="assets/terran-wet-gif.gif" width="100" alt="Terran Wet Planet" />
     </td>
     <td align="center">
-      <img src="assets/terran-dry-gif.gif" width="150" alt="Terran Dry Planet" />
+      <img src="assets/terran-dry-gif.gif" width="100" alt="Terran Dry Planet" />
     </td>
   </tr>
   <tr>
     <td colspan="2" align="center">
-      <img src="assets/galaxy-gif.gif" width="150" alt="Galaxy" />
+      <img src="assets/galaxy-gif.gif" width="100" alt="Galaxy" />
     </td>
   </tr>
   <tr>
     <td colspan="2" align="center">
-      <img src="assets/black-hole-gif.gif" width="450" alt="Black Hole" />
+      <img src="assets/black-hole-gif.gif" width="300" alt="Black Hole" />
     </td>
   </tr>
 </table>
