@@ -1,6 +1,6 @@
-<a href="https://https://www.tobias-livadariu.online/portfolio">
-  <img src="assets/terran-wet-gif.gif" width="420" alt="See portfolio" />
-</a>
+<p align="center">
+  <img src="assets/orbit.gif" width="420" alt="Orbiting planets" />
+</p>
 
 ---
 
