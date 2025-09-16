@@ -1,3 +1,9 @@
+<a href="https://https://www.tobias-livadariu.online/portfolio">
+  <img src="assets/terran-wet-gif.gif" width="420" alt="See portfolio" />
+</a>
+
+---
+
 <div align="center">
   <h1>Tobias Livadariu</h1>
   <p><b>Software Engineering @ University of Waterloo</b> — frontend × backend × agentic systems</p>
