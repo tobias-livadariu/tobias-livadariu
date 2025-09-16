@@ -9,14 +9,14 @@
   </tr>
   <tr>
     <td colspan="2" align="center">
-      <img src="assets/galaxy-gif.gif" width="200" alt="Galaxy" />
+      <img src="assets/galaxy-gif.gif" width="100" alt="Galaxy" />
     </td>
   </tr>
-  <tr>
+  <!-- <tr>
     <td colspan="2" align="center">
       <img src="assets/black-hole-gif.gif" width="300" alt="Black Hole" />
     </td>
-  </tr>
+  </tr> -->
 </table>
 
 ---
