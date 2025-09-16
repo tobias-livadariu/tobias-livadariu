@@ -24,11 +24,16 @@
 <div align="center">
   <h1>Tobias Livadariu</h1>
   <p><b>Software Engineering @ University of Waterloo</b> — frontend × backend × agentic systems</p>
-  <p>
-    <a href="https://tobias-livadariu.online/portfolio">Portfolio</a> ·
-    <a href="mailto:tlivadar@uwaterloo.ca">Email</a> ·
-    <a href="https://linkedin.com/in/tobias-livadariu">LinkedIn</a> ·
-    <a href="https://github.com/tobias-livadariu">GitHub</a>
+  <p align="center">
+    <a href="https://tobias-livadariu.online/portfolio">
+      <img src="https://img.shields.io/badge/Portfolio-000?style=for-the-badge&logo=vercel&logoColor=white" />
+    </a>
+    <a href="mailto:tlivadar@uwaterloo.ca">
+      <img src="https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white" />
+    </a>
+    <a href="https://linkedin.com/in/tobias-livadariu">
+      <img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" />
+    </a>
   </p>
 </div>
 
