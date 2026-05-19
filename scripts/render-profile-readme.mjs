@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const USERNAME = process.env.PROFILE_USERNAME ?? "tobias-livadariu";
-const OUTPUT_PATH = path.join(ROOT, "assets", "profile-terminal.v3.svg");
+const OUTPUT_PATH = path.join(ROOT, "assets", "profile-terminal.v4.svg");
 const ISLAND_PNG_PATH = path.join(ROOT, "assets", "source", "islands-1.png");
 const ISLAND_JSON_PATH = path.join(ROOT, "assets", "source", "islands-1.json");
 const IOSEVKA_REGULAR_PATH = path.join(
@@ -33,8 +33,6 @@ const PALETTE = {
   cyan: "#51c7da",
 };
 
-const PORTFOLIO_HREF = "https://tobias-livadariu.online/portfolio";
-const LINKEDIN_HREF = "https://linkedin.com/in/tobias-livadariu";
 
 const LANGUAGE_COLORS = {
   TypeScript: "#51c7da",
@@ -136,16 +134,11 @@ function tspan(segment) {
   const attrs = [
     `fill="${segment.color ?? PALETTE.fg}"`,
     segment.weight ? `font-weight="${segment.weight}"` : "",
-    segment.underline ? `text-decoration="underline"` : "",
   ]
     .filter(Boolean)
     .join(" ");
 
-  const inner = `<tspan ${attrs}>${escapeXml(segment.text)}</tspan>`;
-  if (segment.href) {
-    return `<a href="${escapeXml(segment.href)}" target="_blank" rel="noopener noreferrer">${inner}</a>`;
-  }
-  return inner;
+  return `<tspan ${attrs}>${escapeXml(segment.text)}</tspan>`;
 }
 
 function textElement({ x, y, segments, size = FONT_SIZE }) {
@@ -615,10 +608,8 @@ function infoBlockRows() {
       },
     ],
     [
-      { text: "Pages:     ", color: PALETTE.yellow },
-      { text: "Portfolio", color: PALETTE.cyan, href: PORTFOLIO_HREF, underline: true },
-      { text: ", ", color: PALETTE.fgBright },
-      { text: "LinkedIn", color: PALETTE.cyan, href: LINKEDIN_HREF, underline: true },
+      { text: "Open to:   ", color: PALETTE.yellow },
+      { text: "Internships, Feedback, Project Conversations", color: PALETTE.fgBright },
     ],
   ];
 
