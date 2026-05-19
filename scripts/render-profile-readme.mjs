@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const USERNAME = process.env.PROFILE_USERNAME ?? "tobias-livadariu";
-const OUTPUT_PATH = path.join(ROOT, "assets", "profile-terminal.svg");
+const OUTPUT_PATH = path.join(ROOT, "assets", "profile-terminal.v2.svg");
 const ISLAND_PNG_PATH = path.join(ROOT, "assets", "source", "islands-1.png");
 const ISLAND_JSON_PATH = path.join(ROOT, "assets", "source", "islands-1.json");
 const IOSEVKA_REGULAR_PATH = path.join(
