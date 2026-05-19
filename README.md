@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/profile-terminal.v2.svg" width="100%" alt="ASCII terminal profile for Tobias Livadariu" />
+  <img src="./assets/profile-terminal.v3.svg" width="100%" alt="ASCII terminal profile for Tobias Livadariu" />
 </p>
 
 <!--
