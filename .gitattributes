@@ -1,0 +1,4 @@
+assets/profile-terminal.svg linguist-generated=true
+assets/fonts/** linguist-vendored=true
+assets/source/** linguist-vendored=true
+*.woff2 binary
