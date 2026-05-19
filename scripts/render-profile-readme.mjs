@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const USERNAME = process.env.PROFILE_USERNAME ?? "tobias-livadariu";
-const OUTPUT_PATH = path.join(ROOT, "assets", "profile-terminal.v4.svg");
+const OUTPUT_PATH = path.join(ROOT, "assets", "profile-terminal.v5.svg");
 const ISLAND_PNG_PATH = path.join(ROOT, "assets", "source", "islands-1.png");
 const ISLAND_JSON_PATH = path.join(ROOT, "assets", "source", "islands-1.json");
 const IOSEVKA_REGULAR_PATH = path.join(
@@ -19,7 +19,7 @@ const IOSEVKA_REGULAR_PATH = path.join(
 );
 
 const PALETTE = {
-  bg: "#181616",
+  bg: "#0d1117",
   fg: "#c5c9c5",
   fgBright: "#dcd7ba",
   fgDim: "#a6a69c",
@@ -873,6 +873,7 @@ ${frameCss(frames.length)}
 <title id="title">Tobias Livadariu terminal profile</title>
 <desc id="desc">ASCII terminal profile with animated island art, tobifetch details, language distribution, and recent repository pulse.</desc>
 <style>${css}</style>
+<rect width="100%" height="100%" fill="${PALETTE.bg}" />
 ${elements.join("\n")}
 </svg>
 `;
