@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const USERNAME = process.env.PROFILE_USERNAME ?? "tobias-livadariu";
-const OUTPUT_PATH = path.join(ROOT, "assets", "profile-terminal.v2.svg");
+const OUTPUT_PATH = path.join(ROOT, "assets", "profile-terminal.v3.svg");
 const ISLAND_PNG_PATH = path.join(ROOT, "assets", "source", "islands-1.png");
 const ISLAND_JSON_PATH = path.join(ROOT, "assets", "source", "islands-1.json");
 const IOSEVKA_REGULAR_PATH = path.join(
@@ -24,6 +24,7 @@ const PALETTE = {
   fgBright: "#dcd7ba",
   fgDim: "#a6a69c",
   comment: "#727169",
+  separator: "#5e6173",
   pink: "#fb7da7",
   mint: "#76c5a4",
   yellow: "#e3cf65",
@@ -31,6 +32,9 @@ const PALETTE = {
   lavender: "#af98e6",
   cyan: "#51c7da",
 };
+
+const PORTFOLIO_HREF = "https://tobias-livadariu.online/portfolio";
+const LINKEDIN_HREF = "https://linkedin.com/in/tobias-livadariu";
 
 const LANGUAGE_COLORS = {
   TypeScript: "#51c7da",
@@ -56,8 +60,8 @@ const CHAR_WIDTH = 8.1;
 const LINE_HEIGHT = 21;
 const GUTTER_WIDTH = 64;
 const ASCII_RAMP = " .:-=+*#%@";
-const ISLAND_COLS = 84;
-const ISLAND_ROWS = 22;
+const ISLAND_COLS = 44;
+const ISLAND_ROWS = 18;
 const INFO_GAP = 28;
 const STROKE_COLOR = PALETTE.bg;
 const STROKE_WIDTH = 3;
@@ -132,11 +136,16 @@ function tspan(segment) {
   const attrs = [
     `fill="${segment.color ?? PALETTE.fg}"`,
     segment.weight ? `font-weight="${segment.weight}"` : "",
+    segment.underline ? `text-decoration="underline"` : "",
   ]
     .filter(Boolean)
     .join(" ");
 
-  return `<tspan ${attrs}>${escapeXml(segment.text)}</tspan>`;
+  const inner = `<tspan ${attrs}>${escapeXml(segment.text)}</tspan>`;
+  if (segment.href) {
+    return `<a href="${escapeXml(segment.href)}" target="_blank" rel="noopener noreferrer">${inner}</a>`;
+  }
+  return inner;
 }
 
 function textElement({ x, y, segments, size = FONT_SIZE }) {
@@ -498,16 +507,21 @@ function pct(value, total) {
   return `${((value / Math.max(1, total)) * 100).toFixed(1).padStart(5, " ")}%`;
 }
 
+const GUTTER_COLOR_CYCLE = [
+  PALETTE.yellow,
+  PALETTE.orange,
+  PALETTE.pink,
+  PALETTE.lavender,
+  PALETTE.cyan,
+  PALETTE.mint,
+];
+
+function gutterColor(lineNumber) {
+  return GUTTER_COLOR_CYCLE[(lineNumber - 1) % GUTTER_COLOR_CYCLE.length];
+}
+
 function gutterSegments(lineNumber) {
-  const colors = [
-    PALETTE.yellow,
-    PALETTE.orange,
-    PALETTE.pink,
-    PALETTE.lavender,
-    PALETTE.cyan,
-    PALETTE.mint,
-  ];
-  const color = colors[(lineNumber - 1) % colors.length];
+  const color = gutterColor(lineNumber);
 
   return [
     { text: "#", color },
@@ -516,26 +530,36 @@ function gutterSegments(lineNumber) {
   ];
 }
 
+// Matches dotfiles starship.toml + git-status.zsh — letters lowercase, no
+// internal spaces, single leading space after the branch, per-letter colors
+// from starship.toml.
+const GIT_STATE_COLORS = {
+  "!": PALETTE.pink,
+  d: PALETTE.pink,
+  r: PALETTE.cyan,
+  m: PALETTE.orange,
+  D: PALETTE.mint,
+  s: PALETTE.mint,
+  u: PALETTE.lavender,
+};
+
 function promptSegments(directory, branch, states = []) {
-  const stateSegments = states.flatMap((state) => {
-    const color =
-      state === "M"
-        ? PALETTE.orange
-        : state === "U"
-          ? PALETTE.lavender
-          : state === "S"
-            ? PALETTE.mint
-            : PALETTE.pink;
-    return [
-      { text: " ", color: PALETTE.fg },
-      { text: state, color },
-    ];
-  });
+  const stateSegments = states.length
+    ? [
+        { text: " ", color: PALETTE.fg },
+        ...states.map((state) => ({
+          text: state,
+          color: GIT_STATE_COLORS[state] ?? PALETTE.pink,
+        })),
+      ]
+    : [];
 
   return [
     { text: "@", color: PALETTE.mint },
     { text: directory, color: PALETTE.cyan },
-    { text: " | ", color: PALETTE.comment },
+    { text: " ", color: PALETTE.fg },
+    { text: "|", color: PALETTE.separator },
+    { text: " ", color: PALETTE.fg },
     { text: branch, color: PALETTE.yellow },
     ...stateSegments,
   ];
@@ -549,7 +573,7 @@ function commandSegments(command) {
 }
 
 function infoBlockRows() {
-  const aboutRows = combineBlocks(ABOUT_TITLE_BLOCKS, 2).map((line) => [
+  const aboutRows = combineBlocks(ABOUT_TITLE_BLOCKS, 6).map((line) => [
     { text: line, color: PALETTE.cyan },
   ]);
   const infoRows = [
@@ -570,28 +594,31 @@ function infoBlockRows() {
       { text: "Software Engineering", color: PALETTE.fgBright },
     ],
     [
-      { text: "Focus:     ", color: PALETTE.yellow },
-      { text: "full-stack systems + LLM tooling", color: PALETTE.fgBright },
-    ],
-    [
       { text: "Frontend:  ", color: PALETTE.yellow },
-      { text: "React, TypeScript, Redux, Vite", color: PALETTE.fgBright },
+      {
+        text: "React, Redux, Tailwind, GraphQL, TypeScript, JavaScript, HTML, CSS, SCSS",
+        color: PALETTE.fgBright,
+      },
     ],
     [
       { text: "Backend:   ", color: PALETTE.yellow },
-      { text: "Node, .NET, Rails, Flask", color: PALETTE.fgBright },
+      {
+        text: "Node, .NET, Rails, Flask, Laravel, FastAPI, LangChain, Python, Ruby, C#, PHP",
+        color: PALETTE.fgBright,
+      },
     ],
     [
       { text: "Data:      ", color: PALETTE.yellow },
-      { text: "SQL, Azure, Docker, MongoDB", color: PALETTE.fgBright },
+      {
+        text: "SQL, MySQL, PostgreSQL, MongoDB, BigQuery, Azure, GCP, Docker, Flink",
+        color: PALETTE.fgBright,
+      },
     ],
     [
-      { text: "Projects:  ", color: PALETTE.yellow },
-      { text: "portfolio-v3, LangSketch, CodeSpeak", color: PALETTE.fgBright },
-    ],
-    [
-      { text: "Open to:   ", color: PALETTE.yellow },
-      { text: "internships, feedback, sharp tools", color: PALETTE.fgBright },
+      { text: "Pages:     ", color: PALETTE.yellow },
+      { text: "Portfolio", color: PALETTE.cyan, href: PORTFOLIO_HREF, underline: true },
+      { text: ", ", color: PALETTE.fgBright },
+      { text: "LinkedIn", color: PALETTE.cyan, href: LINKEDIN_HREF, underline: true },
     ],
   ];
 
@@ -668,17 +695,22 @@ function pushLine(elements, lineNumber, y, contentSegments, x) {
   }
 }
 
+const DISTRIBUTION_BAR_CELLS = 76;
+const DISTRIBUTION_BAR_TOTAL_WIDTH = DISTRIBUTION_BAR_CELLS + 2;
+
 function metricLines(stats) {
   const lines = [];
   const totalLanguageBytes = stats.languages.reduce((sum, item) => sum + item.bytes, 0);
-  const distribution = makeDistributionBar(stats.languages, totalLanguageBytes);
+  const distribution = makeDistributionBar(
+    stats.languages,
+    totalLanguageBytes,
+    DISTRIBUTION_BAR_CELLS,
+  );
   const maxRepo = Math.max(...stats.recentRepos.map((repo) => repo.count), 1);
   const updated = new Date().toISOString().slice(0, 10);
 
-  lines.push(promptSegments("repos/profile-readme", "main", ["S"]));
+  lines.push(promptSegments("repos/tobias-livadariu", "main", ["m", "u"]));
   lines.push(commandSegments("profile-metrics --ascii --public"));
-  lines.push([]);
-  lines.push([{ text: "language mix", color: PALETTE.mint }]);
   lines.push([
     { text: "[", color: PALETTE.comment },
     ...distribution,
@@ -693,8 +725,16 @@ function metricLines(stats) {
     ]);
   }
 
-  lines.push([]);
-  lines.push([{ text: "recent repo pulse", color: PALETTE.mint }]);
+  // Divider between language stats and repo pulse: a row of `8`s matching the
+  // distribution bar's full width (including brackets), colored to match the
+  // gutter line number on the row it lands on.
+  lines.push((lineNumber) => [
+    {
+      text: "8".repeat(DISTRIBUTION_BAR_TOTAL_WIDTH),
+      color: gutterColor(lineNumber),
+    },
+  ]);
+
   for (const repo of stats.recentRepos.slice(0, 6)) {
     const color = repo.name.includes("portfolio")
       ? PALETTE.cyan
@@ -721,6 +761,14 @@ function metricLines(stats) {
   return lines;
 }
 
+function resolveLine(line, lineNumber) {
+  return typeof line === "function" ? line(lineNumber) : line;
+}
+
+function segmentsCharLength(segments) {
+  return segments.reduce((sum, segment) => sum + segment.text.length, 0);
+}
+
 function renderProfileStream(elements, frames, stats) {
   const bodyX = MARGIN;
   const contentX = bodyX + GUTTER_WIDTH;
@@ -729,8 +777,10 @@ function renderProfileStream(elements, frames, stats) {
 
   let lineNumber = 1;
   let y = MARGIN + LINE_HEIGHT;
+  let maxInfoChars = 0;
+  let maxMetricsChars = 0;
 
-  pushLine(elements, lineNumber, y, promptSegments("repos/all-about-me", "main", ["M", "U"]), bodyX);
+  pushLine(elements, lineNumber, y, promptSegments("repos/tobias-livadariu", "main", ["m", "u"]), bodyX);
   lineNumber += 1;
   y += LINE_HEIGHT;
 
@@ -756,6 +806,7 @@ function renderProfileStream(elements, frames, stats) {
     );
     const infoRow = info[row];
     if (infoRow && infoRow.length > 0) {
+      maxInfoChars = Math.max(maxInfoChars, segmentsCharLength(infoRow));
       elements.push(
         textElement({
           x: rightX,
@@ -773,13 +824,20 @@ function renderProfileStream(elements, frames, stats) {
   lineNumber += 1;
   y += LINE_HEIGHT;
 
-  for (const segments of metricLines(stats)) {
+  for (const item of metricLines(stats)) {
+    const segments = resolveLine(item, lineNumber);
+    maxMetricsChars = Math.max(maxMetricsChars, segmentsCharLength(segments));
     pushLine(elements, lineNumber, y, segments, bodyX);
     lineNumber += 1;
     y += LINE_HEIGHT;
   }
 
-  return y;
+  const aboutSectionWidth =
+    GUTTER_WIDTH + ISLAND_COLS * CHAR_WIDTH + INFO_GAP + maxInfoChars * CHAR_WIDTH;
+  const metricsSectionWidth = GUTTER_WIDTH + maxMetricsChars * CHAR_WIDTH;
+  const contentWidth = Math.max(aboutSectionWidth, metricsSectionWidth);
+
+  return { endY: y, contentWidth };
 }
 
 async function buildSvg() {
@@ -791,9 +849,9 @@ async function buildSvg() {
   const fontBase64 = fontData.toString("base64");
   const elements = [];
 
-  const endY = renderProfileStream(elements, frames, stats);
+  const { endY, contentWidth } = renderProfileStream(elements, frames, stats);
 
-  const svgWidth = Math.ceil(MARGIN + GUTTER_WIDTH + ISLAND_COLS * CHAR_WIDTH + INFO_GAP + 56 * CHAR_WIDTH + MARGIN);
+  const svgWidth = Math.ceil(MARGIN + contentWidth + MARGIN);
   const height = Math.ceil(endY + MARGIN);
   const css = `
 @font-face {
@@ -822,7 +880,7 @@ ${frameCss(frames.length)}
 
   return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" viewBox="0 0 ${svgWidth} ${height}" width="${svgWidth}" height="${height}">
 <title id="title">Tobias Livadariu terminal profile</title>
-<desc id="desc">ASCII terminal profile with animated island art, tobifetch details, language mix, and recent repository pulse.</desc>
+<desc id="desc">ASCII terminal profile with animated island art, tobifetch details, language distribution, and recent repository pulse.</desc>
 <style>${css}</style>
 ${elements.join("\n")}
 </svg>
