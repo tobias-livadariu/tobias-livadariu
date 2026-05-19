@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const USERNAME = process.env.PROFILE_USERNAME ?? "tobias-livadariu";
-const OUTPUT_PATH = path.join(ROOT, "assets", "profile-terminal.v5.svg");
+const OUTPUT_PATH = path.join(ROOT, "assets", "profile-terminal.v6.svg");
 const ISLAND_PNG_PATH = path.join(ROOT, "assets", "source", "islands-1.png");
 const ISLAND_JSON_PATH = path.join(ROOT, "assets", "source", "islands-1.json");
 const IOSEVKA_REGULAR_PATH = path.join(
@@ -61,9 +61,6 @@ const ASCII_RAMP = " .:-=+*#%@";
 const ISLAND_COLS = 44;
 const ISLAND_ROWS = 18;
 const INFO_GAP = 28;
-const STROKE_COLOR = PALETTE.bg;
-const STROKE_WIDTH = 3;
-
 const ABOUT_TITLE_BLOCKS = [
   [
     "      .o.        .o8                                 .  ",
@@ -857,10 +854,6 @@ async function buildSvg() {
   font-feature-settings: "calt" 0, "liga" 0, "dlig" 0, "zero" 1;
   dominant-baseline: alphabetic;
   white-space: pre;
-  paint-order: stroke fill;
-  stroke: ${STROKE_COLOR};
-  stroke-width: ${STROKE_WIDTH};
-  stroke-linejoin: round;
 }
 svg {
   text-rendering: geometricPrecision;
