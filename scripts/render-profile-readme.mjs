@@ -65,6 +65,7 @@ const ASCII_RAMP = " .:-=+*#%@";
 const ISLAND_COLS = 44;
 const ISLAND_ROWS = 18;
 const INFO_GAP = 28;
+const ABOUT_TITLE_GAP = 3;
 const ABOUT_TITLE_BLOCKS = [
   [
     "      .o.        .o8                                 .  ",
@@ -567,7 +568,7 @@ function commandSegments(command) {
 }
 
 function infoBlockRows() {
-  const aboutRows = combineBlocks(ABOUT_TITLE_BLOCKS, 6).map((line) => [
+  const aboutRows = combineBlocks(ABOUT_TITLE_BLOCKS, ABOUT_TITLE_GAP).map((line) => [
     { text: line, color: PALETTE.cyan },
   ]);
   const infoRows = [
@@ -717,12 +718,12 @@ function metricLines(stats) {
     ]);
   }
 
-  // Divider between language stats and repo pulse: a row of `8`s matching the
+  // Divider between language stats and repo pulse: a row of `=`s matching the
   // distribution bar's full width (including brackets), colored to match the
   // gutter line number on the row it lands on.
   lines.push((lineNumber) => [
     {
-      text: "8".repeat(DISTRIBUTION_BAR_TOTAL_WIDTH),
+      text: "=".repeat(DISTRIBUTION_BAR_TOTAL_WIDTH),
       color: gutterColor(lineNumber),
     },
   ]);
