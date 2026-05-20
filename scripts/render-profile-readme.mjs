@@ -62,9 +62,6 @@ const HORIZONTAL_PADDING = 0;
 const FIRST_BASELINE_Y = FONT_SIZE;
 const BOTTOM_PADDING = 4;
 const ASCII_RAMP = " .:-=+*#%@";
-const ISLAND_COLS = 44;
-const ISLAND_ROWS = 18;
-const INFO_GAP = 28;
 const ABOUT_TITLE_GAP = 3;
 const ABOUT_TITLE_BLOCKS = [
   [
@@ -86,6 +83,10 @@ const ABOUT_TITLE_BLOCKS = [
     "o8o        o888o `Y8bod8P'",
   ],
 ];
+const ABOUT_TITLE_ROWS = combineBlocks(ABOUT_TITLE_BLOCKS, ABOUT_TITLE_GAP);
+const TITLE_COLS = Math.max(...ABOUT_TITLE_ROWS.map((line) => line.length));
+const ISLAND_COLS = TITLE_COLS - 10;
+const ISLAND_ROWS = Math.round((ISLAND_COLS * CHAR_WIDTH) / LINE_HEIGHT);
 
 const FALLBACK_STATS = {
   languages: [
@@ -392,8 +393,15 @@ async function fetchLanguageStats(repos) {
     }))
     .sort((a, b) => b.bytes - a.bytes);
 
-  const top = sorted.slice(0, 7);
-  const otherBytes = sorted.slice(7).reduce((sum, item) => sum + item.bytes, 0);
+  const visibleLanguageRows = 7;
+  const top =
+    sorted.length > visibleLanguageRows
+      ? sorted.slice(0, visibleLanguageRows - 1)
+      : sorted.slice(0, visibleLanguageRows);
+  const otherBytes =
+    sorted.length > visibleLanguageRows
+      ? sorted.slice(visibleLanguageRows - 1).reduce((sum, item) => sum + item.bytes, 0)
+      : 0;
 
   if (otherBytes > 0) {
     top.push({ name: "Other", bytes: otherBytes, color: LANGUAGE_COLORS.Other });
@@ -471,9 +479,10 @@ async function fetchProfileStats() {
   }
 }
 
-function makeDistributionBar(items, total, cells = 76) {
-  const raw = items.map((item) => ({
+function makeDistributionBar(items, total, cells = 76, colorForItem = (item) => item.color) {
+  const raw = items.map((item, index) => ({
     ...item,
+    color: colorForItem(item, index),
     cells: Math.max(0, Math.floor((item.bytes / total) * cells)),
   }));
   let used = raw.reduce((sum, item) => sum + item.cells, 0);
@@ -568,49 +577,48 @@ function commandSegments(command) {
 }
 
 function infoBlockRows() {
-  const aboutRows = combineBlocks(ABOUT_TITLE_BLOCKS, ABOUT_TITLE_GAP).map((line) => [
+  const aboutRows = ABOUT_TITLE_ROWS.map((line) => [
     { text: line, color: PALETTE.cyan },
   ]);
   const infoRows = [
     [],
     [{ text: "tobias@uwaterloo", color: PALETTE.mint }],
     [{ text: "----------------", color: PALETTE.comment }],
-    [],
     [
-      { text: "Name:      ", color: PALETTE.yellow },
+      { text: "Name:     ", color: PALETTE.yellow },
       { text: "Tobias Livadariu", color: PALETTE.fgBright },
     ],
     [
-      { text: "School:    ", color: PALETTE.yellow },
+      { text: "School:   ", color: PALETTE.yellow },
       { text: "University of Waterloo", color: PALETTE.fgBright },
     ],
     [
-      { text: "Program:   ", color: PALETTE.yellow },
+      { text: "Program:  ", color: PALETTE.yellow },
       { text: "Software Engineering", color: PALETTE.fgBright },
     ],
     [
-      { text: "Frontend:  ", color: PALETTE.yellow },
+      { text: "Frontend: ", color: PALETTE.yellow },
       {
         text: "React, Redux, Tailwind, GraphQL, TypeScript, JavaScript, HTML, CSS, SCSS",
         color: PALETTE.fgBright,
       },
     ],
     [
-      { text: "Backend:   ", color: PALETTE.yellow },
+      { text: "Backend:  ", color: PALETTE.yellow },
       {
-        text: "Node, .NET, Rails, Flask, Laravel, FastAPI, LangChain, Python, Ruby, C#, PHP",
+        text: "Node, .NET, Rails, Flask, Laravel, FastAPI, Python, Ruby, C#, PHP",
         color: PALETTE.fgBright,
       },
     ],
     [
-      { text: "Data:      ", color: PALETTE.yellow },
+      { text: "Data+AI:  ", color: PALETTE.yellow },
       {
-        text: "SQL, MySQL, PostgreSQL, MongoDB, BigQuery, Azure, GCP, Docker, Flink",
+        text: "MySQL, PostgreSQL, MongoDB, BigQuery, Azure, GCP, Docker, Flink, LangChain",
         color: PALETTE.fgBright,
       },
     ],
     [
-      { text: "Open to:   ", color: PALETTE.yellow },
+      { text: "Open to:  ", color: PALETTE.yellow },
       { text: "Internships, Feedback, Project Conversations", color: PALETTE.fgBright },
     ],
   ];
@@ -688,34 +696,48 @@ function pushLine(elements, lineNumber, y, contentSegments, x) {
   }
 }
 
-const DISTRIBUTION_BAR_CELLS = 76;
-const DISTRIBUTION_BAR_TOTAL_WIDTH = DISTRIBUTION_BAR_CELLS + 2;
+const DISTRIBUTION_BAR_TOTAL_WIDTH = TITLE_COLS;
+const DISTRIBUTION_BAR_CELLS = DISTRIBUTION_BAR_TOTAL_WIDTH - 2;
+const METRIC_BAR_WIDTH = 28;
+const METRIC_VALUE_WIDTH = 6;
+const METRIC_LABEL_WIDTH =
+  DISTRIBUTION_BAR_TOTAL_WIDTH - METRIC_BAR_WIDTH - METRIC_VALUE_WIDTH - 2;
+
+function metricValue(value) {
+  return ` ${String(value).padStart(METRIC_VALUE_WIDTH, " ")}`;
+}
 
 function metricLines(stats) {
   const lines = [];
-  const totalLanguageBytes = stats.languages.reduce((sum, item) => sum + item.bytes, 0);
-  const distribution = makeDistributionBar(
-    stats.languages,
-    totalLanguageBytes,
-    DISTRIBUTION_BAR_CELLS,
-  );
+  const languages = stats.languages.slice(0, 7);
+  const totalLanguageBytes = languages.reduce((sum, item) => sum + item.bytes, 0);
   const maxRepo = Math.max(...stats.recentRepos.map((repo) => repo.count), 1);
   const updated = new Date().toISOString().slice(0, 10);
 
   lines.push(promptSegments("repos/tobias-livadariu", "main", ["m", "u"]));
   lines.push(commandSegments("profile-metrics --ascii --public"));
-  lines.push([
+  lines.push((lineNumber) => [
     { text: "[", color: PALETTE.comment },
-    ...distribution,
+    ...makeDistributionBar(
+      languages,
+      totalLanguageBytes,
+      DISTRIBUTION_BAR_CELLS,
+      (_language, index) => gutterColor(lineNumber + 1 + index),
+    ),
     { text: "]", color: PALETTE.comment },
   ]);
 
-  for (const language of stats.languages.slice(0, 7)) {
-    lines.push([
-      { text: `${padRight(language.name, 12)} `, color: language.color },
-      { text: makeValueBar(language.bytes, totalLanguageBytes, 24), color: language.color },
-      { text: ` ${pct(language.bytes, totalLanguageBytes)}`, color: PALETTE.fgDim },
-    ]);
+  for (const language of languages) {
+    lines.push((lineNumber) => {
+      const lineColor = gutterColor(lineNumber);
+      const percentage = pct(language.bytes, totalLanguageBytes);
+
+      return [
+        { text: `${padRight(language.name, METRIC_LABEL_WIDTH)} `, color: lineColor },
+        { text: makeValueBar(language.bytes, totalLanguageBytes, METRIC_BAR_WIDTH), color: lineColor },
+        { text: metricValue(percentage), color: lineColor },
+      ];
+    });
   }
 
   // Divider between language stats and repo pulse: a row of `=`s matching the
@@ -729,18 +751,16 @@ function metricLines(stats) {
   ]);
 
   for (const repo of stats.recentRepos.slice(0, 6)) {
-    const color = repo.name.includes("portfolio")
-      ? PALETTE.cyan
-      : repo.name.includes("dotfiles")
-        ? PALETTE.lavender
-        : repo.name.includes("tobias")
-          ? PALETTE.yellow
-          : PALETTE.orange;
-    lines.push([
-      { text: `${padRight(repo.name, 28)} `, color },
-      { text: makeValueBar(repo.count, maxRepo, 28), color },
-      { text: ` ${String(repo.count).padStart(3, " ")}`, color: PALETTE.fgDim },
-    ]);
+    lines.push((lineNumber) => {
+      const lineColor = gutterColor(lineNumber);
+      const count = String(repo.count);
+
+      return [
+        { text: `${padRight(repo.name, METRIC_LABEL_WIDTH)} `, color: lineColor },
+        { text: makeValueBar(repo.count, maxRepo, METRIC_BAR_WIDTH), color: lineColor },
+        { text: metricValue(count), color: lineColor },
+      ];
+    });
   }
 
   lines.push([]);
@@ -766,7 +786,6 @@ function renderProfileStream(elements, frames, stats) {
   const bodyX = HORIZONTAL_PADDING;
   const contentX = bodyX + GUTTER_WIDTH;
   const artX = contentX;
-  const rightX = artX + ISLAND_COLS * CHAR_WIDTH + INFO_GAP;
 
   let lineNumber = 1;
   let y = FIRST_BASELINE_Y;
@@ -783,11 +802,10 @@ function renderProfileStream(elements, frames, stats) {
 
   const fetchFirstY = y;
   const info = infoBlockRows();
-  const fetchRows = Math.max(ISLAND_ROWS, info.length);
   const islandGroups = renderAnimatedIslandFrames(frames, artX, fetchFirstY, LINE_HEIGHT);
   elements.push(islandGroups);
 
-  for (let row = 0; row < fetchRows; row += 1) {
+  for (let row = 0; row < ISLAND_ROWS; row += 1) {
     const lineY = fetchFirstY + row * LINE_HEIGHT;
     elements.push(
       textElement({
@@ -797,21 +815,18 @@ function renderProfileStream(elements, frames, stats) {
         size: FONT_SIZE,
       }),
     );
-    const infoRow = info[row];
-    if (infoRow && infoRow.length > 0) {
-      maxInfoChars = Math.max(maxInfoChars, segmentsCharLength(infoRow));
-      elements.push(
-        textElement({
-          x: rightX,
-          y: lineY,
-          segments: infoRow,
-          size: FONT_SIZE,
-        }),
-      );
-    }
     lineNumber += 1;
   }
-  y = fetchFirstY + fetchRows * LINE_HEIGHT;
+  y = fetchFirstY + ISLAND_ROWS * LINE_HEIGHT;
+
+  for (const infoRow of info) {
+    if (infoRow.length > 0) {
+      maxInfoChars = Math.max(maxInfoChars, segmentsCharLength(infoRow));
+    }
+    pushLine(elements, lineNumber, y, infoRow, bodyX);
+    lineNumber += 1;
+    y += LINE_HEIGHT;
+  }
 
   pushLine(elements, lineNumber, y, [], bodyX);
   lineNumber += 1;
@@ -825,10 +840,10 @@ function renderProfileStream(elements, frames, stats) {
     y += LINE_HEIGHT;
   }
 
-  const aboutSectionWidth =
-    GUTTER_WIDTH + ISLAND_COLS * CHAR_WIDTH + INFO_GAP + maxInfoChars * CHAR_WIDTH;
+  const islandSectionWidth = GUTTER_WIDTH + ISLAND_COLS * CHAR_WIDTH;
+  const aboutSectionWidth = GUTTER_WIDTH + maxInfoChars * CHAR_WIDTH;
   const metricsSectionWidth = GUTTER_WIDTH + maxMetricsChars * CHAR_WIDTH;
-  const contentWidth = Math.max(aboutSectionWidth, metricsSectionWidth);
+  const contentWidth = Math.max(islandSectionWidth, aboutSectionWidth, metricsSectionWidth);
 
   return { endY: y, contentWidth };
 }
