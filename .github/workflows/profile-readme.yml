@@ -10,7 +10,7 @@ on:
       - "scripts/profile-readme.config.mjs"
       - "assets/source/islands-1.png"
       - "assets/source/islands-1.json"
-      - "assets/fonts/iosevka-term/WOFF2/IosevkaTerm-Regular.woff2"
+      - "assets/fonts/iosevka-term/WOFF2/IosevkaTerm-Regular.ascii.woff2"
       - ".github/workflows/profile-readme.yml"
 
 permissions:
