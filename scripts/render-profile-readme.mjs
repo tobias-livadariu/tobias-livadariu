@@ -17,7 +17,7 @@ const IOSEVKA_REGULAR_PATH = path.join(
   "fonts",
   "iosevka-term",
   "WOFF2",
-  "IosevkaTerm-Regular.woff2",
+  "IosevkaTerm-Regular.ascii.woff2",
 );
 
 const PALETTE = {
