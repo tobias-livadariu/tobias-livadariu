@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" viewBox="0 0 753 1441" width="753" height="1441">
+<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" viewBox="0 0 753 1378" width="753" height="1378">
 <title id="title">Tobias Livadariu terminal profile</title>
 <desc id="desc">ASCII terminal profile with animated island art, tobifetch details, language distribution, and recent repository pulse.</desc>
 <style>
@@ -1744,36 +1744,30 @@ svg {
 <text class="mono" x="0" y="1065" font-size="15"><tspan fill="#fb7da7">#</tspan><tspan fill="#fb7da7"> 51</tspan><tspan fill="#fb7da7">|</tspan></text>
 <text class="mono" x="64" y="1065" font-size="15"><tspan fill="#727169">% </tspan><tspan fill="#dcd7ba">profile-metrics --ascii --public</tspan></text>
 <text class="mono" x="0" y="1086" font-size="15"><tspan fill="#af98e6">#</tspan><tspan fill="#af98e6"> 52</tspan><tspan fill="#af98e6">|</tspan></text>
-<text class="mono" x="64" y="1086" font-size="15"><tspan fill="#727169">[</tspan><tspan fill="#51c7da">##########################</tspan><tspan fill="#76c5a4">###############</tspan><tspan fill="#e3cf65">###########</tspan><tspan fill="#fdad5d">##########</tspan><tspan fill="#fb7da7">########</tspan><tspan fill="#af98e6">######</tspan><tspan fill="#51c7da">#######</tspan><tspan fill="#727169">]</tspan></text>
+<text class="mono" x="64" y="1086" font-size="15"><tspan fill="#727169">[</tspan><tspan fill="#51c7da">########################################</tspan><tspan fill="#76c5a4">##############</tspan><tspan fill="#e3cf65">#########</tspan><tspan fill="#fdad5d">########</tspan><tspan fill="#fb7da7">#######</tspan><tspan fill="#af98e6">####</tspan><tspan fill="#51c7da">#</tspan><tspan fill="#727169">]</tspan></text>
 <text class="mono" x="0" y="1107" font-size="15"><tspan fill="#51c7da">#</tspan><tspan fill="#51c7da"> 53</tspan><tspan fill="#51c7da">|</tspan></text>
-<text class="mono" x="64" y="1107" font-size="15"><tspan fill="#51c7da">TypeScript                                        </tspan><tspan fill="#51c7da">#########-------------------</tspan><tspan fill="#51c7da">  31.0%</tspan></text>
+<text class="mono" x="64" y="1107" font-size="15"><tspan fill="#51c7da">TypeScript                                        </tspan><tspan fill="#51c7da">#############---------------</tspan><tspan fill="#51c7da">  48.0%</tspan></text>
 <text class="mono" x="0" y="1128" font-size="15"><tspan fill="#76c5a4">#</tspan><tspan fill="#76c5a4"> 54</tspan><tspan fill="#76c5a4">|</tspan></text>
-<text class="mono" x="64" y="1128" font-size="15"><tspan fill="#76c5a4">JavaScript                                        </tspan><tspan fill="#76c5a4">#####-----------------------</tspan><tspan fill="#76c5a4">  18.0%</tspan></text>
+<text class="mono" x="64" y="1128" font-size="15"><tspan fill="#76c5a4">Python                                            </tspan><tspan fill="#76c5a4">#####-----------------------</tspan><tspan fill="#76c5a4">  16.1%</tspan></text>
 <text class="mono" x="0" y="1149" font-size="15"><tspan fill="#e3cf65">#</tspan><tspan fill="#e3cf65"> 55</tspan><tspan fill="#e3cf65">|</tspan></text>
-<text class="mono" x="64" y="1149" font-size="15"><tspan fill="#e3cf65">C#                                                </tspan><tspan fill="#e3cf65">####------------------------</tspan><tspan fill="#e3cf65">  13.0%</tspan></text>
+<text class="mono" x="64" y="1149" font-size="15"><tspan fill="#e3cf65">C                                                 </tspan><tspan fill="#e3cf65">###-------------------------</tspan><tspan fill="#e3cf65">  10.5%</tspan></text>
 <text class="mono" x="0" y="1170" font-size="15"><tspan fill="#fdad5d">#</tspan><tspan fill="#fdad5d"> 56</tspan><tspan fill="#fdad5d">|</tspan></text>
-<text class="mono" x="64" y="1170" font-size="15"><tspan fill="#fdad5d">Python                                            </tspan><tspan fill="#fdad5d">###-------------------------</tspan><tspan fill="#fdad5d">  12.0%</tspan></text>
+<text class="mono" x="64" y="1170" font-size="15"><tspan fill="#fdad5d">HTML                                              </tspan><tspan fill="#fdad5d">###-------------------------</tspan><tspan fill="#fdad5d">   9.4%</tspan></text>
 <text class="mono" x="0" y="1191" font-size="15"><tspan fill="#fb7da7">#</tspan><tspan fill="#fb7da7"> 57</tspan><tspan fill="#fb7da7">|</tspan></text>
-<text class="mono" x="64" y="1191" font-size="15"><tspan fill="#fb7da7">Ruby                                              </tspan><tspan fill="#fb7da7">###-------------------------</tspan><tspan fill="#fb7da7">   9.0%</tspan></text>
+<text class="mono" x="64" y="1191" font-size="15"><tspan fill="#fb7da7">CSS                                               </tspan><tspan fill="#fb7da7">###-------------------------</tspan><tspan fill="#fb7da7">   9.3%</tspan></text>
 <text class="mono" x="0" y="1212" font-size="15"><tspan fill="#af98e6">#</tspan><tspan fill="#af98e6"> 58</tspan><tspan fill="#af98e6">|</tspan></text>
-<text class="mono" x="64" y="1212" font-size="15"><tspan fill="#af98e6">CSS                                               </tspan><tspan fill="#af98e6">##--------------------------</tspan><tspan fill="#af98e6">   8.0%</tspan></text>
+<text class="mono" x="64" y="1212" font-size="15"><tspan fill="#af98e6">JavaScript                                        </tspan><tspan fill="#af98e6">#---------------------------</tspan><tspan fill="#af98e6">   5.2%</tspan></text>
 <text class="mono" x="0" y="1233" font-size="15"><tspan fill="#51c7da">#</tspan><tspan fill="#51c7da"> 59</tspan><tspan fill="#51c7da">|</tspan></text>
-<text class="mono" x="64" y="1233" font-size="15"><tspan fill="#51c7da">Other                                             </tspan><tspan fill="#51c7da">###-------------------------</tspan><tspan fill="#51c7da">   9.0%</tspan></text>
+<text class="mono" x="64" y="1233" font-size="15"><tspan fill="#51c7da">Other                                             </tspan><tspan fill="#51c7da">#---------------------------</tspan><tspan fill="#51c7da">   1.4%</tspan></text>
 <text class="mono" x="0" y="1254" font-size="15"><tspan fill="#76c5a4">#</tspan><tspan fill="#76c5a4"> 60</tspan><tspan fill="#76c5a4">|</tspan></text>
 <text class="mono" x="64" y="1254" font-size="15"><tspan fill="#76c5a4">=====================================================================================</tspan></text>
 <text class="mono" x="0" y="1275" font-size="15"><tspan fill="#e3cf65">#</tspan><tspan fill="#e3cf65"> 61</tspan><tspan fill="#e3cf65">|</tspan></text>
-<text class="mono" x="64" y="1275" font-size="15"><tspan fill="#e3cf65">portfolio-website                                 </tspan><tspan fill="#e3cf65">############################</tspan><tspan fill="#e3cf65">     19</tspan></text>
+<text class="mono" x="64" y="1275" font-size="15"><tspan fill="#e3cf65">portfolio-website                                 </tspan><tspan fill="#e3cf65">############################</tspan><tspan fill="#e3cf65">    122</tspan></text>
 <text class="mono" x="0" y="1296" font-size="15"><tspan fill="#fdad5d">#</tspan><tspan fill="#fdad5d"> 62</tspan><tspan fill="#fdad5d">|</tspan></text>
-<text class="mono" x="64" y="1296" font-size="15"><tspan fill="#fdad5d">tobias-livadariu                                  </tspan><tspan fill="#fdad5d">################------------</tspan><tspan fill="#fdad5d">     11</tspan></text>
+<text class="mono" x="64" y="1296" font-size="15"><tspan fill="#fdad5d">tobias-livadariu                                  </tspan><tspan fill="#fdad5d">###-------------------------</tspan><tspan fill="#fdad5d">     11</tspan></text>
 <text class="mono" x="0" y="1317" font-size="15"><tspan fill="#fb7da7">#</tspan><tspan fill="#fb7da7"> 63</tspan><tspan fill="#fb7da7">|</tspan></text>
-<text class="mono" x="64" y="1317" font-size="15"><tspan fill="#fb7da7">dotfiles                                          </tspan><tspan fill="#fb7da7">###############-------------</tspan><tspan fill="#fb7da7">     10</tspan></text>
+<text class="mono" x="64" y="1317" font-size="15"><tspan fill="#fb7da7">taha-shahid1/gitajob                              </tspan><tspan fill="#fb7da7">#---------------------------</tspan><tspan fill="#fb7da7">      1</tspan></text>
 <text class="mono" x="0" y="1338" font-size="15"><tspan fill="#af98e6">#</tspan><tspan fill="#af98e6"> 64</tspan><tspan fill="#af98e6">|</tspan></text>
-<text class="mono" x="64" y="1338" font-size="15"><tspan fill="#af98e6">langsketch                                        </tspan><tspan fill="#af98e6">############----------------</tspan><tspan fill="#af98e6">      8</tspan></text>
 <text class="mono" x="0" y="1359" font-size="15"><tspan fill="#51c7da">#</tspan><tspan fill="#51c7da"> 65</tspan><tspan fill="#51c7da">|</tspan></text>
-<text class="mono" x="64" y="1359" font-size="15"><tspan fill="#51c7da">codespeak                                         </tspan><tspan fill="#51c7da">#########-------------------</tspan><tspan fill="#51c7da">      6</tspan></text>
-<text class="mono" x="0" y="1380" font-size="15"><tspan fill="#76c5a4">#</tspan><tspan fill="#76c5a4"> 66</tspan><tspan fill="#76c5a4">|</tspan></text>
-<text class="mono" x="64" y="1380" font-size="15"><tspan fill="#76c5a4">lights-on                                         </tspan><tspan fill="#76c5a4">######----------------------</tspan><tspan fill="#76c5a4">      4</tspan></text>
-<text class="mono" x="0" y="1401" font-size="15"><tspan fill="#e3cf65">#</tspan><tspan fill="#e3cf65"> 67</tspan><tspan fill="#e3cf65">|</tspan></text>
-<text class="mono" x="0" y="1422" font-size="15"><tspan fill="#fdad5d">#</tspan><tspan fill="#fdad5d"> 68</tspan><tspan fill="#fdad5d">|</tspan></text>
-<text class="mono" x="64" y="1422" font-size="15"><tspan fill="#727169">updated: </tspan><tspan fill="#a6a69c">2026-05-20</tspan><tspan fill="#727169"> | source: </tspan><tspan fill="#a6a69c">local fallback</tspan></text>
+<text class="mono" x="64" y="1359" font-size="15"><tspan fill="#727169">updated: </tspan><tspan fill="#a6a69c">2026-05-20</tspan><tspan fill="#727169"> | source: </tspan><tspan fill="#a6a69c">GitHub REST + token</tspan></text>
 </svg>
