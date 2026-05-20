@@ -2,11 +2,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
+import { PROFILE_SVG_PATH } from "./profile-readme.config.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const USERNAME = process.env.PROFILE_USERNAME ?? "tobias-livadariu";
-const OUTPUT_PATH = path.join(ROOT, "assets", "profile-terminal.v6.svg");
+const OUTPUT_PATH = path.join(ROOT, ...PROFILE_SVG_PATH.split("/"));
+const README_PATH = path.join(ROOT, "README.md");
 const ISLAND_PNG_PATH = path.join(ROOT, "assets", "source", "islands-1.png");
 const ISLAND_JSON_PATH = path.join(ROOT, "assets", "source", "islands-1.json");
 const IOSEVKA_REGULAR_PATH = path.join(
@@ -52,11 +54,13 @@ const LANGUAGE_COLORS = {
   Other: "#727169",
 };
 
-const MARGIN = 24;
 const FONT_SIZE = 15;
 const CHAR_WIDTH = 8.1;
 const LINE_HEIGHT = 21;
 const GUTTER_WIDTH = 64;
+const HORIZONTAL_PADDING = 0;
+const FIRST_BASELINE_Y = FONT_SIZE;
+const BOTTOM_PADDING = 4;
 const ASCII_RAMP = " .:-=+*#%@";
 const ISLAND_COLS = 44;
 const ISLAND_ROWS = 18;
@@ -758,13 +762,13 @@ function segmentsCharLength(segments) {
 }
 
 function renderProfileStream(elements, frames, stats) {
-  const bodyX = MARGIN;
+  const bodyX = HORIZONTAL_PADDING;
   const contentX = bodyX + GUTTER_WIDTH;
   const artX = contentX;
   const rightX = artX + ISLAND_COLS * CHAR_WIDTH + INFO_GAP;
 
   let lineNumber = 1;
-  let y = MARGIN + LINE_HEIGHT;
+  let y = FIRST_BASELINE_Y;
   let maxInfoChars = 0;
   let maxMetricsChars = 0;
 
@@ -839,8 +843,8 @@ async function buildSvg() {
 
   const { endY, contentWidth } = renderProfileStream(elements, frames, stats);
 
-  const svgWidth = Math.ceil(MARGIN + contentWidth + MARGIN);
-  const height = Math.ceil(endY + MARGIN);
+  const svgWidth = Math.ceil(HORIZONTAL_PADDING + contentWidth + HORIZONTAL_PADDING);
+  const height = Math.ceil(endY - LINE_HEIGHT + FONT_SIZE + BOTTOM_PADDING);
   const css = `
 @font-face {
   font-family: "Iosevka Term Web";
@@ -875,7 +879,26 @@ ${elements.join("\n")}
 async function main() {
   const svg = await buildSvg();
   await fs.writeFile(OUTPUT_PATH, svg, "utf8");
+  await syncReadmeImagePath();
   console.log(`Wrote ${path.relative(ROOT, OUTPUT_PATH)}`);
+}
+
+async function syncReadmeImagePath() {
+  const readme = await fs.readFile(README_PATH, "utf8");
+  const imageSrc = PROFILE_SVG_PATH.startsWith("./") ? PROFILE_SVG_PATH : `./${PROFILE_SVG_PATH}`;
+  const imageMarkup = `<img src="${imageSrc}" width="100%" alt="ASCII terminal profile for Tobias Livadariu" />`;
+  const nextReadme = readme.replace(
+    /<img src="[^"]*profile-terminal\.v\d+\.svg" width="100%" alt="ASCII terminal profile for Tobias Livadariu" \/>/,
+    imageMarkup,
+  );
+
+  if (nextReadme === readme && !readme.includes(imageMarkup)) {
+    throw new Error("Could not find the profile SVG image reference in README.md");
+  }
+
+  if (nextReadme !== readme) {
+    await fs.writeFile(README_PATH, nextReadme, "utf8");
+  }
 }
 
 await main();
