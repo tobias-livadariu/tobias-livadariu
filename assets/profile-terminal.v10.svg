@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" viewBox="0 0 753 1357" width="753" height="1357">
+<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" viewBox="0 0 753 1336" width="753" height="1336">
 <title id="title">Tobias Livadariu terminal profile</title>
 <desc id="desc">ASCII terminal profile with animated island art, tobifetch details, language distribution, and recent repository pulse.</desc>
 <style>
@@ -1762,10 +1762,8 @@ svg {
 <text class="mono" x="0" y="1254" font-size="15"><tspan fill="#76c5a4">#</tspan><tspan fill="#76c5a4"> 60</tspan><tspan fill="#76c5a4">|</tspan></text>
 <text class="mono" x="64" y="1254" font-size="15"><tspan fill="#76c5a4">=====================================================================================</tspan></text>
 <text class="mono" x="0" y="1275" font-size="15"><tspan fill="#e3cf65">#</tspan><tspan fill="#e3cf65"> 61</tspan><tspan fill="#e3cf65">|</tspan></text>
-<text class="mono" x="64" y="1275" font-size="15"><tspan fill="#e3cf65">c-and-cpp-docs                                    </tspan><tspan fill="#e3cf65">############################</tspan><tspan fill="#e3cf65">      2</tspan></text>
+<text class="mono" x="64" y="1275" font-size="15"><tspan fill="#e3cf65">portfolio-website                                 </tspan><tspan fill="#e3cf65">############################</tspan><tspan fill="#e3cf65">      1</tspan></text>
 <text class="mono" x="0" y="1296" font-size="15"><tspan fill="#fdad5d">#</tspan><tspan fill="#fdad5d"> 62</tspan><tspan fill="#fdad5d">|</tspan></text>
-<text class="mono" x="64" y="1296" font-size="15"><tspan fill="#fdad5d">portfolio-website                                 </tspan><tspan fill="#fdad5d">##############--------------</tspan><tspan fill="#fdad5d">      1</tspan></text>
 <text class="mono" x="0" y="1317" font-size="15"><tspan fill="#fb7da7">#</tspan><tspan fill="#fb7da7"> 63</tspan><tspan fill="#fb7da7">|</tspan></text>
-<text class="mono" x="0" y="1338" font-size="15"><tspan fill="#af98e6">#</tspan><tspan fill="#af98e6"> 64</tspan><tspan fill="#af98e6">|</tspan></text>
-<text class="mono" x="64" y="1338" font-size="15"><tspan fill="#727169">updated: </tspan><tspan fill="#a6a69c">2026-06-23</tspan><tspan fill="#727169"> | source: </tspan><tspan fill="#a6a69c">GitHub REST + token</tspan></text>
+<text class="mono" x="64" y="1317" font-size="15"><tspan fill="#727169">updated: </tspan><tspan fill="#a6a69c">2026-06-24</tspan><tspan fill="#727169"> | source: </tspan><tspan fill="#a6a69c">GitHub REST + token</tspan></text>
 </svg>
