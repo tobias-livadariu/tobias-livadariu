@@ -1,0 +1,11 @@
+{
+  "name": "tobias-livadariu-profile",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "render": "node scripts/render-profile-readme.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "1.60.0"
+  }
+}

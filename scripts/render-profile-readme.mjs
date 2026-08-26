@@ -1,7 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
+import {
+  flipFrameHorizontally,
+  imageAtlasToAsciiFrames,
+} from "./ascii-image-pipeline.mjs";
+import { STATIC_ASCII_PROFILES } from "./ascii-image-profiles.mjs";
 import { PROFILE_SVG_PATH } from "./profile-readme.config.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -61,7 +65,6 @@ const GUTTER_WIDTH = 64;
 const HORIZONTAL_PADDING = 0;
 const FIRST_BASELINE_Y = FONT_SIZE;
 const BOTTOM_PADDING = 4;
-const ASCII_RAMP = " .:-=+*#%@";
 const ABOUT_TITLE_GAP = 3;
 const ABOUT_TITLE_BLOCKS = [
   [
@@ -87,6 +90,8 @@ const ABOUT_TITLE_ROWS = combineBlocks(ABOUT_TITLE_BLOCKS, ABOUT_TITLE_GAP);
 const TITLE_COLS = Math.max(...ABOUT_TITLE_ROWS.map((line) => line.length));
 const ISLAND_COLS = TITLE_COLS - 10;
 const ISLAND_ROWS = Math.round((ISLAND_COLS * CHAR_WIDTH) / LINE_HEIGHT);
+// The single README planet matches the mirrored, left-hand About-modal planet.
+const ISLAND_FLIP_X = true;
 
 const FALLBACK_STATS = {
   languages: [
@@ -147,153 +152,6 @@ function textElement({ x, y, segments, size = FONT_SIZE }) {
     .join("")}</text>`;
 }
 
-function getBrightness(red, green, blue) {
-  return red * 0.2126 + green * 0.7152 + blue * 0.0722;
-}
-
-function colorToHex(red, green, blue) {
-  return `#${[red, green, blue]
-    .map((value) => Math.round(value).toString(16).padStart(2, "0"))
-    .join("")}`;
-}
-
-function paethPredictor(left, up, upLeft) {
-  const estimate = left + up - upLeft;
-  const leftDistance = Math.abs(estimate - left);
-  const upDistance = Math.abs(estimate - up);
-  const upLeftDistance = Math.abs(estimate - upLeft);
-
-  if (leftDistance <= upDistance && leftDistance <= upLeftDistance) {
-    return left;
-  }
-
-  if (upDistance <= upLeftDistance) {
-    return up;
-  }
-
-  return upLeft;
-}
-
-async function decodePng(filePath) {
-  const buffer = await fs.readFile(filePath);
-  const signature = buffer.subarray(0, 8).toString("hex");
-  if (signature !== "89504e470d0a1a0a") {
-    throw new Error(`${filePath} is not a PNG`);
-  }
-
-  let offset = 8;
-  let width = 0;
-  let height = 0;
-  let bitDepth = 0;
-  let colorType = 0;
-  let interlace = 0;
-  const idatChunks = [];
-
-  while (offset < buffer.length) {
-    const length = buffer.readUInt32BE(offset);
-    const type = buffer.subarray(offset + 4, offset + 8).toString("ascii");
-    const data = buffer.subarray(offset + 8, offset + 8 + length);
-    offset += 12 + length;
-
-    if (type === "IHDR") {
-      width = data.readUInt32BE(0);
-      height = data.readUInt32BE(4);
-      bitDepth = data[8];
-      colorType = data[9];
-      interlace = data[12];
-    } else if (type === "IDAT") {
-      idatChunks.push(data);
-    } else if (type === "IEND") {
-      break;
-    }
-  }
-
-  if (bitDepth !== 8 || colorType !== 6 || interlace !== 0) {
-    throw new Error("Only non-interlaced 8-bit RGBA PNGs are supported");
-  }
-
-  const inflated = zlib.inflateSync(Buffer.concat(idatChunks));
-  const bytesPerPixel = 4;
-  const stride = width * bytesPerPixel;
-  const pixels = Buffer.alloc(width * height * bytesPerPixel);
-  let inputOffset = 0;
-  let previous = Buffer.alloc(stride);
-
-  for (let rowIndex = 0; rowIndex < height; rowIndex += 1) {
-    const filter = inflated[inputOffset];
-    inputOffset += 1;
-    const row = Buffer.alloc(stride);
-
-    for (let index = 0; index < stride; index += 1) {
-      const raw = inflated[inputOffset];
-      inputOffset += 1;
-      const left = index >= bytesPerPixel ? row[index - bytesPerPixel] : 0;
-      const up = previous[index] ?? 0;
-      const upLeft = index >= bytesPerPixel ? previous[index - bytesPerPixel] : 0;
-
-      if (filter === 0) {
-        row[index] = raw;
-      } else if (filter === 1) {
-        row[index] = (raw + left) & 0xff;
-      } else if (filter === 2) {
-        row[index] = (raw + up) & 0xff;
-      } else if (filter === 3) {
-        row[index] = (raw + Math.floor((left + up) / 2)) & 0xff;
-      } else if (filter === 4) {
-        row[index] = (raw + paethPredictor(left, up, upLeft)) & 0xff;
-      } else {
-        throw new Error(`Unsupported PNG filter ${filter}`);
-      }
-    }
-
-    row.copy(pixels, rowIndex * stride);
-    previous = row;
-  }
-
-  return { width, height, pixels };
-}
-
-function pixelAt(image, x, y) {
-  const offset = (y * image.width + x) * 4;
-  return [
-    image.pixels[offset],
-    image.pixels[offset + 1],
-    image.pixels[offset + 2],
-    image.pixels[offset + 3],
-  ];
-}
-
-function frameToAscii(image, source, columns, rows) {
-  return Array.from({ length: rows }, (_, row) =>
-    Array.from({ length: columns }, (_, column) => {
-      const flippedColumn = columns - 1 - column;
-      const sourceX = Math.min(
-        image.width - 1,
-        source.x + Math.floor(((flippedColumn + 0.5) * source.w) / columns),
-      );
-      const sourceY = Math.min(
-        image.height - 1,
-        source.y + Math.floor(((row + 0.5) * source.h) / rows),
-      );
-      const [red, green, blue, alpha] = pixelAt(image, sourceX, sourceY);
-
-      if (alpha / 255 < 0.08) {
-        return { char: " ", color: "transparent" };
-      }
-
-      const rampIndex = Math.min(
-        ASCII_RAMP.length - 1,
-        Math.floor((getBrightness(red, green, blue) / 255) * ASCII_RAMP.length),
-      );
-
-      return {
-        char: ASCII_RAMP[rampIndex],
-        color: colorToHex(red, green, blue),
-      };
-    }),
-  );
-}
-
 function rowToRuns(row) {
   const runs = [];
 
@@ -310,17 +168,28 @@ function rowToRuns(row) {
 }
 
 async function loadIslandFrames(columns, rows) {
-  const [image, atlasText] = await Promise.all([
-    decodePng(ISLAND_PNG_PATH),
+  const [imageBuffer, atlasText] = await Promise.all([
+    fs.readFile(ISLAND_PNG_PATH),
     fs.readFile(ISLAND_JSON_PATH, "utf8"),
   ]);
   const atlas = JSON.parse(atlasText);
   const frameKeys = atlas.animations?.["islands-1"] ?? Object.keys(atlas.frames);
-
-  return frameKeys
+  const sources = frameKeys
     .map((key) => atlas.frames[key])
     .filter(Boolean)
-    .map((frame) => frameToAscii(image, frame.frame, columns, rows).map(rowToRuns));
+    .map((frame) => frame.frame);
+  const frames = await imageAtlasToAsciiFrames({
+    imageBuffer,
+    sources,
+    columns,
+    rows,
+    profile: STATIC_ASCII_PROFILES.modalHeaderPlanet,
+  });
+
+  return frames.map((frame) => {
+    const displayFrame = ISLAND_FLIP_X ? flipFrameHorizontally(frame) : frame;
+    return displayFrame.map(rowToRuns);
+  });
 }
 
 function authHeaders() {

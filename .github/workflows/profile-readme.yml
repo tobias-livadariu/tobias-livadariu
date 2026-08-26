@@ -7,7 +7,11 @@ on:
   push:
     paths:
       - "scripts/render-profile-readme.mjs"
+      - "scripts/ascii-image-pipeline.mjs"
+      - "scripts/ascii-image-profiles.mjs"
       - "scripts/profile-readme.config.mjs"
+      - "package.json"
+      - "package-lock.json"
       - "assets/source/islands-1.png"
       - "assets/source/islands-1.json"
       - "assets/fonts/iosevka-term/WOFF2/IosevkaTerm-Regular.ascii.woff2"
@@ -28,6 +32,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      - name: Install renderer dependencies
+        run: npm ci
 
       - name: Render profile terminal
         run: node scripts/render-profile-readme.mjs
