@@ -98,15 +98,9 @@ const FALLBACK_STATS = {
     { name: "CSS", color: LANGUAGE_COLORS.CSS, bytes: 8 },
     { name: "Other", color: LANGUAGE_COLORS.Other, bytes: 9 },
   ],
-  recentRepos: [
-    { name: "portfolio-website", count: 19 },
-    { name: "tobias-livadariu", count: 11 },
-    { name: "dotfiles", count: 10 },
-    { name: "langsketch", count: 8 },
-    { name: "codespeak", count: 6 },
-    { name: "lights-on", count: 4 },
+  commitRepos: [
+    { name: "portfolio-website", count: 31 },
   ],
-  source: "local fallback",
 };
 
 function escapeXml(value) {
@@ -410,50 +404,115 @@ async function fetchLanguageStats(repos) {
   return top.length > 0 ? top : FALLBACK_STATS.languages;
 }
 
-function eventWeight(event) {
-  if (event.type === "PushEvent") {
-    return Math.max(1, event.payload?.commits?.length ?? 1);
-  }
-
-  if (event.type === "PullRequestEvent") {
-    return 2;
-  }
-
-  if (event.type === "IssuesEvent" || event.type === "ReleaseEvent") {
-    return 1;
-  }
-
-  return 1;
-}
-
-async function fetchRecentRepoStats() {
+async function fetchMonthlyCommitStats() {
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const events = [];
 
   for (let page = 1; page <= 3; page += 1) {
     const batch = await githubJson(
       `https://api.github.com/users/${USERNAME}/events/public?per_page=100&page=${page}`,
     );
-    events.push(...batch);
-    if (batch.length < 100) {
+    events.push(
+      ...batch.filter(
+        (event) => event.type === "PushEvent" && new Date(event.created_at) >= monthStart,
+      ),
+    );
+
+    if (
+      batch.length < 100 ||
+      batch.some((event) => new Date(event.created_at) < monthStart)
+    ) {
       break;
     }
   }
 
-  const countsByRepo = new Map();
+  const latestHeadsByRef = new Map();
   for (const event of events) {
-    const weight = eventWeight(event);
-    if (event.repo?.name) {
-      const name = event.repo.name.replace(`${USERNAME}/`, "");
-      countsByRepo.set(name, (countsByRepo.get(name) ?? 0) + weight);
+    const repoName = event.repo?.name;
+    const head = event.payload?.head;
+    const ref = event.payload?.ref;
+    if (!repoName || !head || !ref) {
+      continue;
+    }
+
+    const refKey = `${repoName}:${ref}`;
+    if (!latestHeadsByRef.has(refKey)) {
+      latestHeadsByRef.set(refKey, { repoName, ref, head });
     }
   }
 
-  const recentRepos = [...countsByRepo.entries()]
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 6);
+  const commitsByRepo = new Map();
+  for (const { repoName, ref, head } of latestHeadsByRef.values()) {
+    const repoCommits = commitsByRepo.get(repoName) ?? new Set();
+    const refName = ref.startsWith("refs/heads/") ? ref.slice("refs/heads/".length) : head;
+    const targets = refName === head ? [head] : [refName, head];
 
-  return recentRepos.length > 0 ? recentRepos : FALLBACK_STATS.recentRepos;
+    for (const target of targets) {
+      const targetCommits = new Set();
+      let targetResolved = true;
+
+      for (let page = 1; page <= 10; page += 1) {
+        let commits;
+        try {
+          const params = new URLSearchParams({
+            sha: target,
+            since: monthStart.toISOString(),
+            until: now.toISOString(),
+            author: USERNAME,
+            per_page: "100",
+            page: String(page),
+          });
+          commits = await githubJson(
+            `https://api.github.com/repos/${repoName}/commits?${params}`,
+          );
+        } catch {
+          targetResolved = false;
+          break;
+        }
+
+        for (const commit of commits) {
+          targetCommits.add(commit.sha);
+        }
+
+        if (commits.length < 100) {
+          break;
+        }
+      }
+
+      if (targetResolved) {
+        for (const sha of targetCommits) {
+          repoCommits.add(sha);
+        }
+        break;
+      }
+    }
+
+    commitsByRepo.set(repoName, repoCommits);
+  }
+
+  const sorted = [...commitsByRepo.entries()]
+    .map(([nameWithOwner, commits]) => ({
+      name: nameWithOwner.replace(`${USERNAME}/`, ""),
+      count: commits.size,
+    }))
+    .filter((repo) => repo.count > 0)
+    .sort((a, b) => b.count - a.count);
+  const visibleCommitRows = 7;
+  const top =
+    sorted.length > visibleCommitRows
+      ? sorted.slice(0, visibleCommitRows - 1)
+      : sorted.slice(0, visibleCommitRows);
+  const otherCount =
+    sorted.length > visibleCommitRows
+      ? sorted.slice(visibleCommitRows - 1).reduce((sum, repo) => sum + repo.count, 0)
+      : 0;
+
+  if (otherCount > 0) {
+    top.push({ name: "Other", count: otherCount });
+  }
+
+  return top;
 }
 
 async function fetchProfileStats() {
@@ -463,15 +522,17 @@ async function fetchProfileStats() {
 
   try {
     const repos = await fetchRepos();
-    const [languages, recentRepos] = await Promise.all([
+    const [languages, commitRepos] = await Promise.all([
       fetchLanguageStats(repos),
-      fetchRecentRepoStats(),
+      fetchMonthlyCommitStats().catch((error) => {
+        console.warn(`Using fallback commit stats: ${error.message}`);
+        return FALLBACK_STATS.commitRepos;
+      }),
     ]);
 
     return {
       languages,
-      recentRepos,
-      source: process.env.GITHUB_TOKEN ? "GitHub REST + token" : "GitHub REST",
+      commitRepos,
     };
   } catch (error) {
     console.warn(`Using fallback profile stats: ${error.message}`);
@@ -479,36 +540,95 @@ async function fetchProfileStats() {
   }
 }
 
-function makeDistributionBar(items, total, cells = 76, colorForItem = (item) => item.color) {
-  const raw = items.map((item, index) => ({
-    ...item,
-    color: colorForItem(item, index),
-    cells: Math.max(0, Math.floor((item.bytes / total) * cells)),
-  }));
-  let used = raw.reduce((sum, item) => sum + item.cells, 0);
-  let index = 0;
-
-  while (used < cells && raw.length > 0) {
-    raw[index % raw.length].cells += 1;
-    used += 1;
-    index += 1;
+function allocateDistributionCells(items, total, cells, colorForItem, valueForItem) {
+  if (items.length === 0 || total <= 0 || cells <= 0) {
+    return [];
   }
 
-  return raw
-    .filter((item) => item.cells > 0)
+  const raw = items
+    .map((item, index) => ({
+      ...item,
+      index,
+      color: colorForItem(item, index),
+      exactCells: (valueForItem(item) / Math.max(1, total)) * cells,
+    }))
     .map((item) => ({
-      text: "#".repeat(item.cells),
-      color: item.color,
+      ...item,
+      cells: Math.max(0, Math.floor(item.exactCells)),
     }));
+  let used = raw.reduce((sum, item) => sum + item.cells, 0);
+  const remainderOrder = [...raw].sort(
+    (a, b) => b.exactCells - b.cells - (a.exactCells - a.cells) || a.index - b.index,
+  );
+  let remainderIndex = 0;
+
+  while (used < cells && remainderOrder.length > 0) {
+    remainderOrder[remainderIndex % remainderOrder.length].cells += 1;
+    used += 1;
+    remainderIndex += 1;
+  }
+
+  return raw.filter((item) => item.cells > 0);
 }
 
-function makeValueBar(value, max, width = 26) {
-  const filled = max > 0 ? Math.max(1, Math.round((value / max) * width)) : 0;
-  return `${"#".repeat(filled)}${"-".repeat(Math.max(0, width - filled))}`;
+function makeDistributionBar(
+  items,
+  total,
+  cells = 76,
+  colorForItem = (item) => item.color,
+  valueForItem = (item) => item.bytes,
+  character = "#",
+) {
+  const distribution = allocateDistributionCells(
+    items,
+    total,
+    cells,
+    colorForItem,
+    valueForItem,
+  ).map(
+    (item) => ({
+      text: character.repeat(item.cells),
+      color: item.color,
+    }),
+  );
+
+  return distribution.length > 0
+    ? distribution
+    : [{ text: "-".repeat(cells), color: PALETTE.comment }];
+}
+
+function makeDistributionText(text, items, total, colorForItem, valueForItem) {
+  let offset = 0;
+
+  return allocateDistributionCells(
+    items,
+    total,
+    text.length,
+    colorForItem,
+    valueForItem,
+  ).map((item) => {
+    const segment = {
+      text: text.slice(offset, offset + item.cells),
+      color: item.color,
+    };
+    offset += item.cells;
+    return segment;
+  });
+}
+
+function makeValueBarSegments(value, max, color, width = 26, character = "#") {
+  const filled = value > 0 && max > 0 ? Math.max(1, Math.round((value / max) * width)) : 0;
+
+  return [
+    { text: "[", color: PALETTE.comment },
+    { text: character.repeat(filled), color },
+    { text: "-".repeat(Math.max(0, width - filled)), color: PALETTE.comment },
+    { text: "]", color: PALETTE.comment },
+  ].filter((segment) => segment.text.length > 0);
 }
 
 function pct(value, total) {
-  return `${((value / Math.max(1, total)) * 100).toFixed(1).padStart(5, " ")}%`;
+  return `${((value / Math.max(1, total)) * 100).toFixed(1)}%`;
 }
 
 const GUTTER_COLOR_CYCLE = [
@@ -699,23 +819,171 @@ function pushLine(elements, lineNumber, y, contentSegments, x) {
 const DISTRIBUTION_BAR_TOTAL_WIDTH = TITLE_COLS;
 const DISTRIBUTION_BAR_CELLS = DISTRIBUTION_BAR_TOTAL_WIDTH - 2;
 const METRIC_BAR_WIDTH = 28;
-const METRIC_VALUE_WIDTH = 6;
-const METRIC_LABEL_WIDTH =
-  DISTRIBUTION_BAR_TOTAL_WIDTH - METRIC_BAR_WIDTH - METRIC_VALUE_WIDTH - 2;
+const METRIC_BAR_TOTAL_WIDTH = METRIC_BAR_WIDTH + 2;
 
-function metricValue(value) {
-  return ` ${String(value).padStart(METRIC_VALUE_WIDTH, " ")}`;
+function percentageSegments(percentage, percentageWidth, color) {
+  const digits = percentage.slice(0, -1);
+  const leadingPadding = " ".repeat(Math.max(0, percentageWidth - percentage.length));
+
+  return [
+    { text: `${leadingPadding}${digits}`, color },
+    { text: "%", color: PALETTE.comment },
+  ];
+}
+
+function languageMetricValueSegments(
+  percentage,
+  percentageWidth,
+  commitCountWidth,
+  color,
+) {
+  return [
+    { text: " ", color },
+    ...percentageSegments(percentage, percentageWidth, color),
+    { text: " ".repeat(3 + commitCountWidth), color },
+  ];
+}
+
+function monthlyCommitMetricValueSegments(
+  count,
+  percentage,
+  percentageWidth,
+  commitCountWidth,
+  color,
+) {
+  return [
+    { text: " ", color },
+    ...percentageSegments(percentage, percentageWidth, color),
+    { text: " | ", color: PALETTE.comment },
+    { text: String(count).padStart(commitCountWidth, " "), color },
+  ];
+}
+
+function headingPadding(width, side) {
+  if (width <= 0) {
+    return "";
+  }
+
+  const remaining = width - 1;
+  const trailing = remaining % 2 === 1 ? "<" : "";
+  const leftPadding = `>${"<>".repeat(Math.floor(remaining / 2))}${trailing}`;
+
+  if (side === "left") {
+    return leftPadding;
+  }
+
+  return [...leftPadding]
+    .reverse()
+    .map((character) => (character === "<" ? ">" : "<"))
+    .join("");
+}
+
+function metricHeadingSegments({
+  marker,
+  label,
+  items,
+  total,
+  lineNumber,
+  valueForItem,
+}) {
+  const labelSegments =
+    total > 0 && items.length > 0
+      ? makeDistributionText(
+          label,
+          items,
+          total,
+          (_item, index) => gutterColor(lineNumber + 2 + index),
+          valueForItem,
+        )
+      : [{ text: label, color: gutterColor(lineNumber + 2) }];
+  const heading = [
+    { text: marker, color: PALETTE.comment },
+    ...labelSegments,
+    { text: marker, color: PALETTE.comment },
+  ];
+  const headingWidth = segmentsCharLength(heading);
+  const availablePadding = Math.max(0, DISTRIBUTION_BAR_TOTAL_WIDTH - headingWidth);
+  const leftPadding = Math.floor(availablePadding / 2);
+  const rightPadding = availablePadding - leftPadding;
+
+  return [
+    { text: headingPadding(leftPadding, "left"), color: PALETTE.comment },
+    ...heading,
+    { text: headingPadding(rightPadding, "right"), color: PALETTE.comment },
+  ];
+}
+
+function makeAlternatingSeparator(width) {
+  function getCurrChar(index) {
+    if (index === 0 || index === baseWidth - 1) {
+      return "=";
+    }
+    if (index === 1 || index === baseWidth - 2) {
+      return "-";
+    }
+    if (index === 2 || index === baseWidth - 3) {
+      return "#";
+    }
+    if (index === 3 || index === baseWidth - 4) {
+      return "-";
+    }
+    if (index === 4 || index === baseWidth - 5) {
+      return "=";
+    }
+    return index % 2 === 0 ? "-" : "|";
+  }
+
+  const baseWidth = width % 2 === 0 ? width - 1 : width;
+  const characters = Array.from({ length: baseWidth }, (_value, index) =>
+    getCurrChar(index),
+  );
+
+  if (baseWidth !== width) {
+    const center = Math.floor(characters.length / 2);
+    const plusIndex = characters[center] === "|" ? center : Math.max(1, center - 1);
+    characters.splice(plusIndex, 0, "|");
+  }
+
+  return characters.join("");
 }
 
 function metricLines(stats) {
   const lines = [];
   const languages = stats.languages.slice(0, 7);
   const totalLanguageBytes = languages.reduce((sum, item) => sum + item.bytes, 0);
-  const maxRepo = Math.max(...stats.recentRepos.map((repo) => repo.count), 1);
+  const commitRepos = stats.commitRepos.slice(0, 7);
+  const totalCommits = commitRepos.reduce((sum, repo) => sum + repo.count, 0);
+  const maxRepoCommits = Math.max(...commitRepos.map((repo) => repo.count), 1);
+  const languagePercentages = languages.map((language) =>
+    pct(language.bytes, totalLanguageBytes),
+  );
+  const commitPercentages = commitRepos.map((repo) => pct(repo.count, totalCommits));
+  const percentageWidth = Math.max(
+    "0.0%".length,
+    ...languagePercentages.map((percentage) => percentage.length),
+    ...commitPercentages.map((percentage) => percentage.length),
+  );
+  const commitCountWidth = Math.max(
+    1,
+    ...commitRepos.map((repo) => String(repo.count).length),
+  );
+  const metricValueWidth = 1 + percentageWidth + 3 + commitCountWidth;
+  const metricLabelWidth =
+    DISTRIBUTION_BAR_TOTAL_WIDTH - METRIC_BAR_TOTAL_WIDTH - metricValueWidth - 1;
   const updated = new Date().toISOString().slice(0, 10);
 
   lines.push(promptSegments("repos/tobias-livadariu", "main", ["m", "u"]));
   lines.push(commandSegments("profile-metrics --ascii --public"));
+  lines.push((lineNumber) =>
+    metricHeadingSegments({
+      marker: "#",
+      label: "LANGUAGES",
+      items: languages,
+      total: totalLanguageBytes,
+      lineNumber,
+      valueForItem: (language) => language.bytes,
+    }),
+  );
   lines.push((lineNumber) => [
     { text: "[", color: PALETTE.comment },
     ...makeDistributionBar(
@@ -723,42 +991,82 @@ function metricLines(stats) {
       totalLanguageBytes,
       DISTRIBUTION_BAR_CELLS,
       (_language, index) => gutterColor(lineNumber + 1 + index),
+      (language) => language.bytes,
+      "#",
     ),
     { text: "]", color: PALETTE.comment },
   ]);
 
-  for (const language of languages) {
+  for (const [index, language] of languages.entries()) {
     lines.push((lineNumber) => {
       const lineColor = gutterColor(lineNumber);
-      const percentage = pct(language.bytes, totalLanguageBytes);
+      const percentage = languagePercentages[index];
 
       return [
-        { text: `${padRight(language.name, METRIC_LABEL_WIDTH)} `, color: lineColor },
-        { text: makeValueBar(language.bytes, totalLanguageBytes, METRIC_BAR_WIDTH), color: lineColor },
-        { text: metricValue(percentage), color: lineColor },
+        { text: `${padRight(language.name, metricLabelWidth)} `, color: lineColor },
+        ...makeValueBarSegments(
+          language.bytes,
+          totalLanguageBytes,
+          lineColor,
+          METRIC_BAR_WIDTH,
+        ),
+        ...languageMetricValueSegments(
+          percentage,
+          percentageWidth,
+          commitCountWidth,
+          lineColor,
+        ),
       ];
     });
   }
 
-  // Divider between language stats and repo pulse: a row of `=`s matching the
-  // distribution bar's full width (including brackets), colored to match the
-  // gutter line number on the row it lands on.
+  lines.push([
+    { text: makeAlternatingSeparator(DISTRIBUTION_BAR_TOTAL_WIDTH), color: PALETTE.comment },
+  ]);
+  lines.push((lineNumber) =>
+    metricHeadingSegments({
+      marker: "@",
+      label: "MONTHLY-COMMITS",
+      items: commitRepos,
+      total: totalCommits,
+      lineNumber,
+      valueForItem: (repo) => repo.count,
+    }),
+  );
   lines.push((lineNumber) => [
-    {
-      text: "=".repeat(DISTRIBUTION_BAR_TOTAL_WIDTH),
-      color: gutterColor(lineNumber),
-    },
+    { text: "[", color: PALETTE.comment },
+    ...makeDistributionBar(
+      commitRepos,
+      totalCommits,
+      DISTRIBUTION_BAR_CELLS,
+      (_repo, index) => gutterColor(lineNumber + 1 + index),
+      (repo) => repo.count,
+      "@",
+    ),
+    { text: "]", color: PALETTE.comment },
   ]);
 
-  for (const repo of stats.recentRepos.slice(0, 6)) {
+  for (const [index, repo] of commitRepos.entries()) {
     lines.push((lineNumber) => {
       const lineColor = gutterColor(lineNumber);
-      const count = String(repo.count);
+      const percentage = commitPercentages[index];
 
       return [
-        { text: `${padRight(repo.name, METRIC_LABEL_WIDTH)} `, color: lineColor },
-        { text: makeValueBar(repo.count, maxRepo, METRIC_BAR_WIDTH), color: lineColor },
-        { text: metricValue(count), color: lineColor },
+        { text: `${padRight(repo.name, metricLabelWidth)} `, color: lineColor },
+        ...makeValueBarSegments(
+          repo.count,
+          maxRepoCommits,
+          lineColor,
+          METRIC_BAR_WIDTH,
+          "@",
+        ),
+        ...monthlyCommitMetricValueSegments(
+          repo.count,
+          percentage,
+          percentageWidth,
+          commitCountWidth,
+          lineColor,
+        ),
       ];
     });
   }
@@ -767,8 +1075,6 @@ function metricLines(stats) {
   lines.push([
     { text: "updated: ", color: PALETTE.comment },
     { text: updated, color: PALETTE.fgDim },
-    { text: " | source: ", color: PALETTE.comment },
-    { text: stats.source, color: PALETTE.fgDim },
   ]);
 
   return lines;
@@ -884,7 +1190,7 @@ ${frameCss(frames.length)}
 
   return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" viewBox="0 0 ${svgWidth} ${height}" width="${svgWidth}" height="${height}">
 <title id="title">Tobias Livadariu terminal profile</title>
-<desc id="desc">ASCII terminal profile with animated island art, tobifetch details, language distribution, and recent repository pulse.</desc>
+<desc id="desc">ASCII terminal profile with animated island art, tobifetch details, language distribution, and current-month public commit distribution.</desc>
 <style>${css}</style>
 <rect width="100%" height="100%" fill="${PALETTE.bg}" />
 ${elements.join("\n")}
