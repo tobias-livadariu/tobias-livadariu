@@ -4,6 +4,15 @@ export const TRANSPARENT_CELL = { char: " ", color: "transparent" };
 
 const clampUnit = (value) => Math.min(1, Math.max(0, value));
 
+function smoothstep(edgeStart, edgeEnd, value) {
+  if (edgeStart === edgeEnd) {
+    return value < edgeStart ? 0 : 1;
+  }
+
+  const amount = clampUnit((value - edgeStart) / (edgeEnd - edgeStart));
+  return amount * amount * (3 - 2 * amount);
+}
+
 function colorString(red, green, blue) {
   return `rgb(${Math.round(red)}, ${Math.round(green)}, ${Math.round(blue)})`;
 }
@@ -398,6 +407,21 @@ function processTone(sampled, columns, rows, profile) {
       luminance[index] = clampUnit(
         luminance[index] +
           (luminance[index] - softened[index]) * profile.tone.sharpenAmount,
+      );
+    }
+  }
+
+  if (profile.tone.shadowLift !== 0) {
+    const halfSoftness = Math.max(0, profile.tone.shadowLiftSoftness) / 2;
+    const transitionStart = profile.tone.shadowLiftThreshold - halfSoftness;
+    const transitionEnd = profile.tone.shadowLiftThreshold + halfSoftness;
+
+    for (let index = 0; index < luminance.length; index += 1) {
+      const shadowWeight =
+        1 - smoothstep(transitionStart, transitionEnd, luminance[index]);
+      luminance[index] = clampUnit(
+        luminance[index] +
+          profile.tone.shadowLift * shadowWeight * (1 - luminance[index]),
       );
     }
   }
