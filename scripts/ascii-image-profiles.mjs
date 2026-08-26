@@ -48,11 +48,11 @@ export const STATIC_ASCII_PROFILES = {
       // Strength of large-scale local contrast; 0 disables the stage.
       localContrastAmount: 0.22,
       // Raises only dark tones by this fraction of their remaining headroom.
-      shadowLift: 0.1,
+      shadowLift: 0.205,
       // Luminance around which the shadow-only lift fades to zero.
-      shadowLiftThreshold: 0.32,
+      shadowLiftThreshold: 0.36,
       // Width of the transition between lifted shadows and untouched tones.
-      shadowLiftSoftness: 0.18,
+      shadowLiftSoftness: 0.21,
       // Adds Sobel edge magnitude to glyph density; 0 preserves pure tone.
       edgeBoost: 0.1,
     },
