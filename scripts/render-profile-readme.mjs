@@ -7,6 +7,12 @@ import {
 } from "./ascii-image-pipeline.mjs";
 import { STATIC_ASCII_PROFILES } from "./ascii-image-profiles.mjs";
 import { PROFILE_SVG_PATH } from "./profile-readme.config.mjs";
+import {
+  ASCII_FRAMES_CACHE_PATH,
+  decodeFrames,
+  encodeFrames,
+  fingerprintFrameInputs,
+} from "./ascii-frames-cache.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -15,6 +21,12 @@ const OUTPUT_PATH = path.join(ROOT, ...PROFILE_SVG_PATH.split("/"));
 const README_PATH = path.join(ROOT, "README.md");
 const ISLAND_PNG_PATH = path.join(ROOT, "assets", "source", "islands-1.png");
 const ISLAND_JSON_PATH = path.join(ROOT, "assets", "source", "islands-1.json");
+const ASCII_FRAMES_PATH = path.join(ROOT, ...ASCII_FRAMES_CACHE_PATH.split("/"));
+// Rebuilding samples the spritesheet in a real browser; every other run
+// replays the committed cache and needs no extra dependencies.
+const REBUILD_FRAMES =
+  process.argv.includes("--rebuild-frames") ||
+  process.env.PROFILE_REBUILD_FRAMES === "1";
 const IOSEVKA_REGULAR_PATH = path.join(
   ROOT,
   "assets",
@@ -167,24 +179,79 @@ function rowToRuns(row) {
   return runs;
 }
 
-async function loadIslandFrames(columns, rows) {
-  const [imageBuffer, atlasText] = await Promise.all([
-    fs.readFile(ISLAND_PNG_PATH),
-    fs.readFile(ISLAND_JSON_PATH, "utf8"),
-  ]);
+async function buildIslandFrames(columns, rows, imageBuffer, atlasText) {
   const atlas = JSON.parse(atlasText);
   const frameKeys = atlas.animations?.["islands-1"] ?? Object.keys(atlas.frames);
   const sources = frameKeys
     .map((key) => atlas.frames[key])
     .filter(Boolean)
     .map((frame) => frame.frame);
-  const frames = await imageAtlasToAsciiFrames({
+
+  return imageAtlasToAsciiFrames({
     imageBuffer,
     sources,
     columns,
     rows,
     profile: STATIC_ASCII_PROFILES.modalHeaderPlanet,
   });
+}
+
+async function readFrameCache() {
+  try {
+    return JSON.parse(await fs.readFile(ASCII_FRAMES_PATH, "utf8"));
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+async function loadIslandFrames(columns, rows) {
+  const profile = STATIC_ASCII_PROFILES.modalHeaderPlanet;
+  const [imageBuffer, atlasText] = await Promise.all([
+    fs.readFile(ISLAND_PNG_PATH),
+    fs.readFile(ISLAND_JSON_PATH, "utf8"),
+  ]);
+  const fingerprint = fingerprintFrameInputs({
+    imageBuffer,
+    atlasText,
+    profile,
+    columns,
+    rows,
+    flipX: ISLAND_FLIP_X,
+  });
+
+  let frames;
+
+  if (REBUILD_FRAMES) {
+    frames = await buildIslandFrames(columns, rows, imageBuffer, atlasText);
+    await fs.mkdir(path.dirname(ASCII_FRAMES_PATH), { recursive: true });
+    await fs.writeFile(
+      ASCII_FRAMES_PATH,
+      `${JSON.stringify({ profileId: profile.id, columns, rows, fingerprint, ...encodeFrames(frames) })}\n`,
+      "utf8",
+    );
+    console.log(`Rebuilt ${ASCII_FRAMES_CACHE_PATH} (${frames.length} frames)`);
+  } else {
+    const cache = await readFrameCache();
+
+    if (!cache) {
+      throw new Error(
+        `Missing ${ASCII_FRAMES_CACHE_PATH}. Run \`npm run build:frames\` to build it.`,
+      );
+    }
+
+    if (cache.fingerprint !== fingerprint) {
+      throw new Error(
+        `${ASCII_FRAMES_CACHE_PATH} was built from different source art, tuning ` +
+          `profile, or grid size. Run \`npm run build:frames\` to refresh it.`,
+      );
+    }
+
+    frames = decodeFrames(cache);
+  }
 
   return frames.map((frame) => {
     const displayFrame = ISLAND_FLIP_X ? flipFrameHorizontally(frame) : frame;

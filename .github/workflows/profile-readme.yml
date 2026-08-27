@@ -10,8 +10,8 @@ on:
       - "scripts/ascii-image-pipeline.mjs"
       - "scripts/ascii-image-profiles.mjs"
       - "scripts/profile-readme.config.mjs"
-      - "package.json"
-      - "package-lock.json"
+      - "scripts/ascii-frames-cache.mjs"
+      - "assets/generated/island-ascii-frames.json"
       - "assets/source/islands-1.png"
       - "assets/source/islands-1.json"
       - "assets/fonts/iosevka-term/WOFF2/IosevkaTerm-Regular.ascii.woff2"
@@ -33,9 +33,9 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install renderer dependencies
-        run: npm ci
-
+      # No install step: the render replays the committed ASCII frame cache and
+      # runs on Node's standard library alone. playwright-core is a dev-only
+      # dependency used by `npm run build:frames`, which is run locally.
       - name: Render profile terminal
         run: node scripts/render-profile-readme.mjs
         env:

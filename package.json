@@ -3,9 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "render": "node scripts/render-profile-readme.mjs"
+    "render": "node scripts/render-profile-readme.mjs",
+    "build:frames": "node scripts/render-profile-readme.mjs --rebuild-frames"
   },
-  "dependencies": {
+  "devDependencies": {
     "playwright-core": "1.60.0"
   }
 }

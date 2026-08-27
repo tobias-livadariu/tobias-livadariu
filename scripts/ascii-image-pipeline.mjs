@@ -1,4 +1,3 @@
-import { chromium } from "playwright-core";
 
 export const TRANSPARENT_CELL = { char: " ", color: "transparent" };
 
@@ -68,6 +67,10 @@ async function sampleFrames(imageBuffer, sources, columns, rows, profile) {
   const imageUrl = `data:image/png;base64,${imageBuffer.toString("base64")}`;
   const executablePath = process.env.PROFILE_ASCII_BROWSER_EXECUTABLE;
   const channel = process.env.PROFILE_ASCII_BROWSER_CHANNEL ?? "chrome";
+  // Imported lazily so the daily render, which reads pre-built frames from the
+  // cache, never needs playwright-core or a browser installed. Only the
+  // frame rebuild reaches this far.
+  const { chromium } = await import("playwright-core");
   const browser = await chromium.launch({
     headless: true,
     ...(executablePath ? { executablePath } : { channel }),
