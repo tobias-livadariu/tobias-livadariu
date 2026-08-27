@@ -1,2 +1,2 @@
 // Single source of truth for the generated profile SVG path.
-export const PROFILE_SVG_PATH = "assets/profile-terminal.v11.svg";
+export const PROFILE_SVG_PATH = "assets/profile-terminal.v12.svg";
