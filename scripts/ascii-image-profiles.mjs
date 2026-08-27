@@ -61,6 +61,13 @@ export const STATIC_ASCII_PROFILES = {
       saturation: 1.08,
       // Blends output color brightness toward processed glyph luminance.
       toneMapStrength: 0.45,
+      // Snaps each RGB channel onto this many evenly spaced steps before the
+      // SVG writer run-length encodes each row. Sampling noise makes adjacent
+      // cells differ by a unit or two, which breaks runs and inflates the
+      // generated file; snapping merges those neighbours back together.
+      // 0 disables snapping. Lower values shrink the file but risk banding
+      // across the smooth shadow gradients.
+      levels: 32,
     },
     quantization: {
       // Characters ordered from visually lightest to visually densest.

@@ -13,8 +13,31 @@ function smoothstep(edgeStart, edgeEnd, value) {
   return amount * amount * (3 - 2 * amount);
 }
 
-function colorString(red, green, blue) {
-  return `rgb(${Math.round(red)}, ${Math.round(green)}, ${Math.round(blue)})`;
+const clamp255 = (value) => Math.min(255, Math.max(0, value));
+
+/**
+ * Snaps a 0-255 channel onto an evenly spaced ladder of `levels` steps.
+ * Neighbouring cells that differ only by sampling noise collapse onto the
+ * same step, which lets the SVG writer merge them into one run-length span.
+ * `levels` of 0 (or 1) disables snapping and keeps the exact channel value.
+ */
+function quantizeChannel(value, levels) {
+  const exact = clamp255(value);
+
+  if (!levels || levels < 2) {
+    return Math.round(exact);
+  }
+
+  const steps = levels - 1;
+
+  return Math.round((Math.round((exact / 255) * steps) * 255) / steps);
+}
+
+function colorString(red, green, blue, levels) {
+  const channel = (value) =>
+    quantizeChannel(value, levels).toString(16).padStart(2, "0");
+
+  return `#${channel(red)}${channel(green)}${channel(blue)}`;
 }
 
 function srgbToLinear(value) {
@@ -558,6 +581,7 @@ function processedColor(sampled, tone, index, profile) {
     clampUnit(red * scale) * 255,
     clampUnit(green * scale) * 255,
     clampUnit(blue * scale) * 255,
+    profile.color.levels,
   );
 }
 
