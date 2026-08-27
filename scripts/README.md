@@ -48,10 +48,37 @@ driven by how often the colour changes between neighbouring cells, not by the
 frame count. Sampling noise used to leave adjacent cells differing by a unit or
 two, which broke every run and tripled the file.
 
-`color.levels` in `ascii-image-profiles.mjs` snaps each RGB channel onto evenly
-spaced steps so those neighbours merge back together. At the current value of
-`32` the largest colour shift is 5/255 and the glyphs are untouched. Lowering it
-shrinks the file further but risks banding across the shadow gradients.
+Two knobs in `ascii-image-profiles.mjs` control this, and they do different jobs:
+
+- **`color.levels`** snaps each channel onto evenly spaced steps. This shrinks
+  the *vocabulary* of colours, which is what gzip rewards, since a small set of
+  repeated strings compresses far better than a large one.
+- **`color.mergeThreshold`** lets a cell join the run in progress when its colour
+  is within that many units. This shrinks the *number of runs*, which is what
+  raw size tracks. It beats making `levels` finer, because two cells either side
+  of a ladder boundary never merge however fine the ladder is.
+
+They must be tuned together: a threshold below one quantisation step
+(255/(levels-1)) does nothing at all, because no two neighbours are ever that
+close after snapping. At `levels: 32` the step is 8.2, which is why the
+threshold is 8.
+
+Current settings hold the largest colour shift to 8/255 with a mean of 2.44, and
+leave every glyph untouched.
+
+### Things that were measured and rejected
+
+Do not spend time re-deriving these:
+
+- **A better colour palette (median cut).** Going from 2,595 colours to 257 cut
+  run count by only 3% while pushing peak error to 46/255. Runs break because of
+  *spatial* variation from the dithering, not because the palette is large.
+- **`<use>` to share repeated rows.** There are none. All 1,450 island rows are
+  distinct, and 0% of rows match between consecutive frames.
+- **Swapping `fill="#rrggbb"` for CSS classes.** Cuts 100 KB of raw size and
+  makes the gzipped file *bigger* (125.1 KB to 126.0 KB). gzip already replaces
+  each repeated fill with a back-reference; the stylesheet adds thousands of
+  unique rules that compress badly. Raw size is not the target.
 
 ### The embedded font
 

@@ -47,7 +47,12 @@ can never hit a missing glyph.
 The SVG loads on every view of the profile, so size is a real cost. It is
 dominated by how many `<tspan>` runs each row breaks into, which is a function of
 how often the colour changes between neighbouring cells — not the frame count.
-`color.levels` is the knob; `scripts/README.md` explains the trade-off.
+`color.levels` and `color.mergeThreshold` are the knobs, and they must be tuned
+together; `scripts/README.md` explains the trade-off and lists the optimisations
+already measured and rejected.
+
+Judge every such change by the **gzipped** size. Raw size is misleading: swapping
+fills for CSS classes cuts 100 KB of raw bytes and makes the transfer larger.
 
 When judging a change, compare the **gzipped** size, since GitHub serves the file
 compressed, and check that the glyphs are unchanged. A colour-encoding change

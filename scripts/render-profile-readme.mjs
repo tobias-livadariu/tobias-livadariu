@@ -162,21 +162,72 @@ function textElement({ x, y, segments, size = FONT_SIZE }) {
   const safeSegments =
     typeof segments === "string" ? [{ text: segments, color: PALETTE.fg }] : segments;
 
-  return `<text class="mono" x="${x}" y="${y}" font-size="${size}">${safeSegments
+  // FONT_SIZE lives in the .mono rule, so it is written out only when a call
+  // genuinely asks for something else. That keeps the attribute off ~1,500
+  // elements.
+  const sizeAttr = size === FONT_SIZE ? "" : ` font-size="${size}"`;
+
+  return `<text class="mono" x="${x}" y="${y}"${sizeAttr}>${safeSegments
     .map(tspan)
     .join("")}</text>`;
 }
 
-function rowToRuns(row) {
+const HEX_COLOR = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i;
+
+function parseHex(color) {
+  const match = HEX_COLOR.exec(color);
+
+  return match
+    ? [
+        Number.parseInt(match[1], 16),
+        Number.parseInt(match[2], 16),
+        Number.parseInt(match[3], 16),
+      ]
+    : null;
+}
+
+const channelDistance = (a, b) =>
+  Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]), Math.abs(a[2] - b[2]));
+
+/**
+ * Run length encodes one row, allowing a cell to join the run in progress when
+ * its colour is within `threshold` of that run's colour.
+ *
+ * Every run costs about 30 bytes of `<tspan>` markup to carry an average of two
+ * characters, so run count, not colour count, decides how large the SVG is.
+ * Merging greedily along the row beats snapping colours onto a fixed ladder:
+ * two cells either side of a ladder boundary never merge however fine the
+ * ladder is, while this joins them and bounds the error at `threshold`.
+ *
+ * Spaces carry no ink, so they always join the current run whatever their
+ * colour, which merges the runs on either side of them for free.
+ */
+function rowToRuns(row, threshold = 0) {
   const runs = [];
+  let anchor = null;
 
   for (const cell of row) {
     const last = runs.at(-1);
+
+    if (last && cell.char === " ") {
+      last.text += cell.char;
+      continue;
+    }
+
     if (last && last.color === cell.color) {
       last.text += cell.char;
-    } else {
-      runs.push({ color: cell.color, text: cell.char });
+      continue;
     }
+
+    const rgb = threshold > 0 ? parseHex(cell.color) : null;
+
+    if (last && anchor && rgb && channelDistance(rgb, anchor) <= threshold) {
+      last.text += cell.char;
+      continue;
+    }
+
+    runs.push({ color: cell.color, text: cell.char });
+    anchor = rgb;
   }
 
   return runs;
@@ -258,7 +309,7 @@ async function loadIslandFrames(columns, rows) {
 
   return frames.map((frame) => {
     const displayFrame = ISLAND_FLIP_X ? flipFrameHorizontally(frame) : frame;
-    return displayFrame.map(rowToRuns);
+    return displayFrame.map((row) => rowToRuns(row, profile.color.mergeThreshold));
   });
 }
 
@@ -1114,6 +1165,7 @@ async function buildSvg() {
   font-style: normal;
 }
 .mono {
+  font-size: ${FONT_SIZE}px;
   font-family: "Iosevka Term Web", "Iosevka Term", ui-monospace, "SFMono-Regular", Menlo, monospace;
   font-variant-ligatures: none;
   font-feature-settings: "calt" 0, "liga" 0, "dlig" 0, "zero" 1;
@@ -1132,7 +1184,7 @@ ${frameCss(frames.length)}
 <desc id="desc">ASCII terminal profile with animated island art, tobifetch details, language distribution, and current-month public commit distribution.</desc>
 <style>${css}</style>
 <rect width="100%" height="100%" fill="${PALETTE.bg}" />
-${elements.join("\n")}
+${elements.join("")}
 </svg>
 `;
 }

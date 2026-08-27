@@ -68,6 +68,13 @@ export const STATIC_ASCII_PROFILES = {
       // 0 disables snapping. Lower values shrink the file but risk banding
       // across the smooth shadow gradients.
       levels: 32,
+      // Cells whose colour is within this many 0-255 units of the run in
+      // progress join it instead of starting a new <tspan>. Run count is what
+      // decides the generated SVG's size, and merging along the row beats
+      // `levels` at it: cells either side of a ladder boundary never merge
+      // however fine the ladder, while this joins them with the error bounded
+      // at exactly this value. 0 disables merging.
+      mergeThreshold: 8,
     },
     quantization: {
       // Characters ordered from visually lightest to visually densest.
