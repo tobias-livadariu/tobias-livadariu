@@ -12,6 +12,7 @@ while the part running daily in CI needs nothing but Node.
 |---|---|---|---|
 | **Render** | `npm run render` | Node only | every day, in CI |
 | **Rebuild frames** | `npm run build:frames` | dev deps + Chrome | only when the island art or its tuning changes |
+| **Rebuild font** | `npm run build:font` | `pyftsubset` | only when the typeface changes |
 
 Turning the island spritesheet into coloured ASCII means rasterizing and sampling
 pixels, which needs a real browser. Those frames depend only on the source atlas
@@ -51,6 +52,25 @@ two, which broke every run and tripled the file.
 spaced steps so those neighbours merge back together. At the current value of
 `32` the largest colour shift is 5/255 and the glyphs are untouched. Lowering it
 shrinks the file further but risks banding across the shadow gradients.
+
+### The embedded font
+
+The SVG embeds its font so it renders the same everywhere, which makes that font
+a third of what a visitor downloads. The vendored `IosevkaTerm-Regular.ascii.woff2`
+is misleading: its cmap is trimmed to 95 codepoints but it still carries all 2809
+of Iosevka's glyph outlines, so 64 KB of every download was glyphs that can never
+be drawn.
+
+`assets/generated/iosevka-term-regular.ascii.subset.woff2` is the real subset at
+5 KB, built by `npm run build:font`. It keeps the same 95 printable ASCII
+codepoints, the same advance widths, and the `zero` feature the stylesheet
+enables. Screenshots of the SVG before and after the swap are pixel-identical.
+
+It subsets `U+0020-007E` rather than only the glyphs currently used, because the
+stats text changes daily and a glyph missing from the subset would render as a
+fallback box.
+
+### Tuning notes
 
 Two things to keep in mind when tuning:
 

@@ -27,13 +27,16 @@ const ASCII_FRAMES_PATH = path.join(ROOT, ...ASCII_FRAMES_CACHE_PATH.split("/"))
 const REBUILD_FRAMES =
   process.argv.includes("--rebuild-frames") ||
   process.env.PROFILE_REBUILD_FRAMES === "1";
+// The vendored .ascii face still carries every one of Iosevka's 2809 glyph
+// outlines; only its cmap was trimmed. Embedding it spent 64 KB of the ~211 KB
+// a visitor downloads on glyphs that can never be drawn. This subset keeps the
+// same 95 printable ASCII codepoints and the same advance widths, at 5 KB.
+// Rebuild it with `npm run build:font`. See scripts/README.md.
 const IOSEVKA_REGULAR_PATH = path.join(
   ROOT,
   "assets",
-  "fonts",
-  "iosevka-term",
-  "WOFF2",
-  "IosevkaTerm-Regular.ascii.woff2",
+  "generated",
+  "iosevka-term-regular.ascii.subset.woff2",
 );
 
 const PALETTE = {

@@ -33,6 +33,15 @@ source spritesheet, `STATIC_ASCII_PROFILES`, or the island grid size. The render
 verifies a fingerprint of those inputs and fails loudly when the cache is stale,
 so a forgotten rebuild breaks the workflow rather than shipping stale art.
 
+## The embedded font is a subset
+
+`assets/generated/iosevka-term-regular.ascii.subset.woff2` is what gets embedded,
+not the vendored face under `assets/fonts/`. The vendored one still carries every
+Iosevka glyph outline despite its trimmed cmap, and embedding it wasted 64 KB on
+every page load. Rebuild the subset with `npm run build:font` if the typeface
+changes, and keep it covering all of `U+0020-007E` so daily-changing stats text
+can never hit a missing glyph.
+
 ## Watch the generated SVG's size
 
 The SVG loads on every view of the profile, so size is a real cost. It is
