@@ -42,6 +42,13 @@ every page load. Rebuild the subset with `npm run build:font` if the typeface
 changes, and keep it covering all of `U+0020-007E` so daily-changing stats text
 can never hit a missing glyph.
 
+## Private commit counts need PROFILE_TOKEN
+
+The `{PRIVATE}` row aggregates commits across private repositories and never
+names them. The workflow's `GITHUB_TOKEN` cannot see private repositories, so
+without a `PROFILE_TOKEN` secret that row is absent rather than wrong. Never
+render a private repository's name into the SVG; the profile is public.
+
 ## Watch the generated SVG's size
 
 The SVG loads on every view of the profile, so size is a real cost. It is

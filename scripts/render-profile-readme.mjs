@@ -112,6 +112,9 @@ const ISLAND_FLIP_X = true;
 // through the month, which reads as inactivity on an otherwise busy profile and
 // disagrees with the contribution graph beside it.
 const COMMIT_WINDOW_DAYS = 31;
+// Rendered with the braces in the comment colour so it reads as a category
+// rather than a repository that happens to be called PRIVATE.
+const PRIVATE_BUCKET_LABEL = "{PRIVATE}";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const FALLBACK_STATS = {
@@ -326,8 +329,16 @@ function authHeaders() {
     "X-GitHub-Api-Version": "2022-11-28",
   };
 
-  if (process.env.GITHUB_TOKEN) {
-    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  // PROFILE_TOKEN is a personal access token, used when the stats need to see
+  // more than the workflow's own repository: private repositories for the
+  // {PRIVATE} total, and contributions to repositories the user does not own.
+  // Without it everything still renders, just from public owned repos alone.
+  // `||`, not `??`: a workflow that maps an unset secret hands us an empty
+  // string, and that must fall through to GITHUB_TOKEN rather than replace it.
+  const token = process.env.PROFILE_TOKEN || process.env.GITHUB_TOKEN;
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
 
   return headers;
@@ -385,6 +396,28 @@ async function githubJson(url) {
   }
 
   throw lastError;
+}
+
+async function githubGraphql(query, variables) {
+  const response = await fetch("https://api.github.com/graphql", {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  if (!response.ok) {
+    const error = new Error(`${response.status} ${response.statusText}: graphql`);
+    error.status = response.status;
+    throw error;
+  }
+
+  const payload = await response.json();
+
+  if (payload.errors?.length) {
+    throw new Error(payload.errors.map((entry) => entry.message).join("; "));
+  }
+
+  return payload;
 }
 
 async function fetchRepos() {
@@ -461,61 +494,182 @@ async function fetchLanguageStats(repos) {
  * which is what GitHub's own contribution graph shows. Matching it is the point:
  * these numbers sit next to that graph on the profile.
  */
+/** Counts the user's commits on one repository's default branch in the window. */
+async function countCommitsOnDefaultBranch(repo, windowStart, now) {
+  const shas = new Set();
+
+  for (let page = 1; page <= 10; page += 1) {
+    const params = new URLSearchParams({
+      sha: repo.default_branch,
+      since: windowStart.toISOString(),
+      until: now.toISOString(),
+      author: USERNAME,
+      per_page: "100",
+      page: String(page),
+    });
+
+    let commits;
+
+    try {
+      commits = await githubJson(
+        `https://api.github.com/repos/${repo.full_name}/commits?${params}`,
+      );
+    } catch (error) {
+      // A repository with no commits answers 409 and a missing branch 404;
+      // both legitimately mean "nothing here". Anything else would make the
+      // count too low, so surface it instead of quietly reporting fewer
+      // commits than were actually made.
+      if (error.status === 409 || error.status === 404) {
+        break;
+      }
+
+      throw error;
+    }
+
+    for (const commit of commits) {
+      shas.add(commit.sha);
+    }
+
+    if (commits.length < 100) {
+      break;
+    }
+  }
+
+  return shas.size;
+}
+
+/**
+ * Total commits across the user's private repositories.
+ *
+ * Reported as one bucket and never by name: the profile is public, so the fact
+ * that private work happened is shareable while what it was is not. Needs a
+ * token that can list private repositories; without one this is 0 and the
+ * bucket simply does not appear.
+ */
+async function fetchPrivateCommitTotal(windowStart, now) {
+  let owned;
+
+  try {
+    owned = await githubJson(
+      "https://api.github.com/user/repos?per_page=100&affiliation=owner&sort=pushed",
+    );
+  } catch (error) {
+    if (error.status === 401 || error.status === 403) {
+      return 0;
+    }
+
+    throw error;
+  }
+
+  const active = owned.filter(
+    (repo) =>
+      repo.private &&
+      !repo.fork &&
+      !repo.archived &&
+      repo.pushed_at &&
+      new Date(repo.pushed_at) >= windowStart,
+  );
+
+  let total = 0;
+
+  for (const repo of active) {
+    total += await countCommitsOnDefaultBranch(repo, windowStart, now);
+  }
+
+  return total;
+}
+
+/**
+ * Commits to repositories the user does not own, from the contributions graph.
+ *
+ * There is no REST endpoint for "repositories I have contributed to", and the
+ * graph already counts only default branch commits in non-forks, which is
+ * exactly the wanted behaviour: work landed on someone's main branch counts,
+ * commits pushed to an arbitrary branch of a large project do not.
+ */
+async function fetchExternalContributions(windowStart, now) {
+  const query = `query($login:String!,$from:DateTime!,$to:DateTime!){
+    user(login:$login){
+      contributionsCollection(from:$from,to:$to){
+        commitContributionsByRepository(maxRepositories:25){
+          repository{nameWithOwner owner{login} isPrivate}
+          contributions{totalCount}
+        }
+      }
+    }
+  }`;
+
+  let payload;
+
+  try {
+    payload = await githubGraphql(query, {
+      login: USERNAME,
+      from: windowStart.toISOString(),
+      to: now.toISOString(),
+    });
+  } catch (error) {
+    console.warn(`Skipping external contributions: ${error.message}`);
+    return [];
+  }
+
+  const byRepository =
+    payload?.data?.user?.contributionsCollection?.commitContributionsByRepository ?? [];
+
+  return byRepository
+    .filter(
+      (entry) =>
+        entry.repository &&
+        !entry.repository.isPrivate &&
+        entry.repository.owner?.login !== USERNAME,
+    )
+    .map((entry) => ({
+      name: entry.repository.nameWithOwner,
+      count: entry.contributions.totalCount,
+    }))
+    .filter((entry) => entry.count > 0);
+}
+
+/**
+ * Commits per repository over the trailing window, from three sources.
+ *
+ * Owned public repositories come from the repo list rather than the events
+ * feed: events are capped near 300 entries and the head SHA one records stops
+ * resolving after a force push, so an actively worked repository could drop out
+ * silently. Repositories the user does not own come from the contributions
+ * graph, and private work is folded into a single unnamed bucket.
+ */
 async function fetchRecentCommitStats(repos) {
   const now = new Date();
   const windowStart = new Date(now.getTime() - COMMIT_WINDOW_DAYS * DAY_MS);
   const active = repos.filter(
     (repo) => repo.pushed_at && new Date(repo.pushed_at) >= windowStart,
   );
-  const commitsByRepo = new Map();
+
+  const owned = [];
 
   for (const repo of active) {
-    const shas = new Set();
+    const count = await countCommitsOnDefaultBranch(repo, windowStart, now);
 
-    for (let page = 1; page <= 10; page += 1) {
-      const params = new URLSearchParams({
-        sha: repo.default_branch,
-        since: windowStart.toISOString(),
-        until: now.toISOString(),
-        author: USERNAME,
-        per_page: "100",
-        page: String(page),
-      });
-
-      let commits;
-
-      try {
-        commits = await githubJson(
-          `https://api.github.com/repos/${repo.full_name}/commits?${params}`,
-        );
-      } catch (error) {
-        // A repository with no commits answers 409 and a missing branch 404;
-        // both legitimately mean "nothing here". Anything else would make the
-        // count too low, so surface it instead of quietly reporting fewer
-        // commits than were actually made.
-        if (error.status === 409 || error.status === 404) {
-          break;
-        }
-
-        throw error;
-      }
-
-      for (const commit of commits) {
-        shas.add(commit.sha);
-      }
-
-      if (commits.length < 100) {
-        break;
-      }
-    }
-
-    if (shas.size > 0) {
-      commitsByRepo.set(repo.name, shas);
+    if (count > 0) {
+      owned.push({ name: repo.name, count });
     }
   }
 
-  const sorted = [...commitsByRepo.entries()]
-    .map(([name, commits]) => ({ name, count: commits.size }))
+  const [external, privateTotal] = await Promise.all([
+    fetchExternalContributions(windowStart, now),
+    fetchPrivateCommitTotal(windowStart, now).catch((error) => {
+      console.warn(`Skipping private commit total: ${error.message}`);
+      return 0;
+    }),
+  ]);
+
+  const entries = [...owned, ...external];
+
+  if (privateTotal > 0) {
+    entries.push({ name: PRIVATE_BUCKET_LABEL, count: privateTotal, private: true });
+  }
+
+  const sorted = entries
     .filter((repo) => repo.count > 0)
     .sort((a, b) => b.count - a.count);
   const visibleCommitRows = 7;
@@ -1072,7 +1226,7 @@ function metricLines(stats) {
       const percentage = commitPercentages[index];
 
       return [
-        { text: `${padRight(repo.name, metricLabelWidth)} `, color: lineColor },
+        ...metricLabelSegments(repo, metricLabelWidth, lineColor),
         ...makeValueBarSegments(
           repo.count,
           maxRepoCommits,
@@ -1106,6 +1260,28 @@ function resolveLine(line, lineNumber) {
 
 function segmentsCharLength(segments) {
   return segments.reduce((sum, segment) => sum + segment.text.length, 0);
+}
+
+/**
+ * The label cell for one commit row.
+ *
+ * The private bucket is not a repository, so its braces are drawn in the same
+ * colour as the dividers and other punctuation while the word itself keeps the
+ * row colour. That reads as a category marker rather than a repo named PRIVATE.
+ */
+function metricLabelSegments(repo, width, lineColor) {
+  if (!repo.private) {
+    return [{ text: `${padRight(repo.name, width)} `, color: lineColor }];
+  }
+
+  const trailing = " ".repeat(Math.max(0, width - PRIVATE_BUCKET_LABEL.length));
+
+  return [
+    { text: "{", color: PALETTE.comment },
+    { text: "PRIVATE", color: lineColor },
+    { text: "}", color: PALETTE.comment },
+    { text: `${trailing} `, color: lineColor },
+  ];
 }
 
 function renderProfileStream(elements, frames, stats) {

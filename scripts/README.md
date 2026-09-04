@@ -124,6 +124,31 @@ Only the default branch counts, and only commits whose author is the user. That
 is what GitHub's contribution graph counts, and matching it is the point, since
 the two sit next to each other on the profile.
 
+Three sources feed the section:
+
+- **Owned public repositories**, counted over the default branch via REST.
+- **Repositories the user does not own**, from the contributions graph, shown as
+  `owner/repo`. There is no REST endpoint for "repositories I contributed to",
+  and the graph already counts only default branch commits in non-forks, which
+  is the wanted rule: work landed on someone's main branch counts, a commit
+  pushed to an arbitrary branch of a large project does not.
+- **Private repositories**, summed into one `{PRIVATE}` row. The count is
+  shareable, the repository names are not, so they are never emitted. The braces
+  render in the comment colour and the word in the row colour, so it reads as a
+  category rather than a repo called PRIVATE.
+
+### PROFILE_TOKEN
+
+The workflow's own `GITHUB_TOKEN` is scoped to this repository, so it cannot
+list private repositories. Without more, `{PRIVATE}` is 0 and the row is simply
+left out; nothing else is affected.
+
+To count private work, add a personal access token with the `repo` scope as a
+repository secret named `PROFILE_TOKEN`. The workflow already passes it through.
+`authHeaders` prefers it over `GITHUB_TOKEN` when it is non-empty, using `||`
+rather than `??` so that an unset secret, which arrives as an empty string,
+falls through instead of blanking the authorization header.
+
 ## Environment variables
 
 | variable | effect |
