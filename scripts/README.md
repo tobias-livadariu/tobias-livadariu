@@ -106,6 +106,24 @@ Two things to keep in mind when tuning:
 - **Measure the gzipped size.** GitHub serves the SVG with `content-encoding:
   gzip`, so transfer size is roughly a sixth of the size on disk.
 
+## Commit stats are a rolling window
+
+`COMMIT_WINDOW_DAYS` in `render-profile-readme.mjs` is how far back the
+commit section looks, counted from the moment of the render. It is deliberately
+not the calendar month: a calendar window shows almost nothing on the 1st and
+fills up over the following weeks, which reads as inactivity right next to a
+contribution graph that says otherwise.
+
+Repositories come from the owner's repo list, filtered to those pushed inside
+the window, not from the public events feed. Events are capped at roughly 300
+entries and the head SHA an event records stops resolving after a force push,
+so an actively worked repository could vanish from these numbers. Switching to
+the repo list took the reported total from 2 commits to 87 on the same day.
+
+Only the default branch counts, and only commits whose author is the user. That
+is what GitHub's contribution graph counts, and matching it is the point, since
+the two sit next to each other on the profile.
+
 ## Environment variables
 
 | variable | effect |

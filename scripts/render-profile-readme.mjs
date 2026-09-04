@@ -107,6 +107,12 @@ const ISLAND_COLS = TITLE_COLS - 10;
 const ISLAND_ROWS = Math.round((ISLAND_COLS * CHAR_WIDTH) / LINE_HEIGHT);
 // The single README planet matches the mirrored, left-hand About-modal planet.
 const ISLAND_FLIP_X = true;
+// Commit stats cover this many days back from the moment of the render, not the
+// calendar month. A calendar window reports almost nothing on the 1st and grows
+// through the month, which reads as inactivity on an otherwise busy profile and
+// disagrees with the contribution graph beside it.
+const COMMIT_WINDOW_DAYS = 31;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const FALLBACK_STATS = {
   languages: [
@@ -350,13 +356,14 @@ async function fetchRepos() {
     }
   }
 
-  return repos.filter((repo) => !repo.fork && !repo.archived && repo.name !== USERNAME);
+  return repos.filter((repo) => !repo.fork && !repo.archived);
 }
 
 async function fetchLanguageStats(repos) {
   const totals = new Map();
 
-  for (const repo of repos) {
+  // The profile repo is generated output, not work worth counting as a language.
+  for (const repo of repos.filter((repo) => repo.name !== USERNAME)) {
     try {
       const languages = await githubJson(repo.languages_url);
       for (const [name, bytes] of Object.entries(languages)) {
@@ -394,98 +401,66 @@ async function fetchLanguageStats(repos) {
   return top.length > 0 ? top : FALLBACK_STATS.languages;
 }
 
-async function fetchMonthlyCommitStats() {
+/**
+ * Counts the user's own commits per repository over the trailing window.
+ *
+ * Repositories come from the owner's repo list rather than the public events
+ * feed. Events are capped at roughly 300 entries, and the head SHA an event
+ * records stops resolving after any force push, so a repository could silently
+ * drop out of these stats while still being worked on.
+ *
+ * Only the default branch is counted, and only commits authored by the user,
+ * which is what GitHub's own contribution graph shows. Matching it is the point:
+ * these numbers sit next to that graph on the profile.
+ */
+async function fetchRecentCommitStats(repos) {
   const now = new Date();
-  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const events = [];
-
-  for (let page = 1; page <= 3; page += 1) {
-    const batch = await githubJson(
-      `https://api.github.com/users/${USERNAME}/events/public?per_page=100&page=${page}`,
-    );
-    events.push(
-      ...batch.filter(
-        (event) => event.type === "PushEvent" && new Date(event.created_at) >= monthStart,
-      ),
-    );
-
-    if (
-      batch.length < 100 ||
-      batch.some((event) => new Date(event.created_at) < monthStart)
-    ) {
-      break;
-    }
-  }
-
-  const latestHeadsByRef = new Map();
-  for (const event of events) {
-    const repoName = event.repo?.name;
-    const head = event.payload?.head;
-    const ref = event.payload?.ref;
-    if (!repoName || !head || !ref) {
-      continue;
-    }
-
-    const refKey = `${repoName}:${ref}`;
-    if (!latestHeadsByRef.has(refKey)) {
-      latestHeadsByRef.set(refKey, { repoName, ref, head });
-    }
-  }
-
+  const windowStart = new Date(now.getTime() - COMMIT_WINDOW_DAYS * DAY_MS);
+  const active = repos.filter(
+    (repo) => repo.pushed_at && new Date(repo.pushed_at) >= windowStart,
+  );
   const commitsByRepo = new Map();
-  for (const { repoName, ref, head } of latestHeadsByRef.values()) {
-    const repoCommits = commitsByRepo.get(repoName) ?? new Set();
-    const refName = ref.startsWith("refs/heads/") ? ref.slice("refs/heads/".length) : head;
-    const targets = refName === head ? [head] : [refName, head];
 
-    for (const target of targets) {
-      const targetCommits = new Set();
-      let targetResolved = true;
+  for (const repo of active) {
+    const shas = new Set();
 
-      for (let page = 1; page <= 10; page += 1) {
-        let commits;
-        try {
-          const params = new URLSearchParams({
-            sha: target,
-            since: monthStart.toISOString(),
-            until: now.toISOString(),
-            author: USERNAME,
-            per_page: "100",
-            page: String(page),
-          });
-          commits = await githubJson(
-            `https://api.github.com/repos/${repoName}/commits?${params}`,
-          );
-        } catch {
-          targetResolved = false;
-          break;
-        }
+    for (let page = 1; page <= 10; page += 1) {
+      const params = new URLSearchParams({
+        sha: repo.default_branch,
+        since: windowStart.toISOString(),
+        until: now.toISOString(),
+        author: USERNAME,
+        per_page: "100",
+        page: String(page),
+      });
 
-        for (const commit of commits) {
-          targetCommits.add(commit.sha);
-        }
+      let commits;
 
-        if (commits.length < 100) {
-          break;
-        }
+      try {
+        commits = await githubJson(
+          `https://api.github.com/repos/${repo.full_name}/commits?${params}`,
+        );
+      } catch {
+        // Empty repository, or a default branch that no longer resolves.
+        break;
       }
 
-      if (targetResolved) {
-        for (const sha of targetCommits) {
-          repoCommits.add(sha);
-        }
+      for (const commit of commits) {
+        shas.add(commit.sha);
+      }
+
+      if (commits.length < 100) {
         break;
       }
     }
 
-    commitsByRepo.set(repoName, repoCommits);
+    if (shas.size > 0) {
+      commitsByRepo.set(repo.name, shas);
+    }
   }
 
   const sorted = [...commitsByRepo.entries()]
-    .map(([nameWithOwner, commits]) => ({
-      name: nameWithOwner.replace(`${USERNAME}/`, ""),
-      count: commits.size,
-    }))
+    .map(([name, commits]) => ({ name, count: commits.size }))
     .filter((repo) => repo.count > 0)
     .sort((a, b) => b.count - a.count);
   const visibleCommitRows = 7;
@@ -514,7 +489,7 @@ async function fetchProfileStats() {
     const repos = await fetchRepos();
     const [languages, commitRepos] = await Promise.all([
       fetchLanguageStats(repos),
-      fetchMonthlyCommitStats().catch((error) => {
+      fetchRecentCommitStats(repos).catch((error) => {
         console.warn(`Using fallback commit stats: ${error.message}`);
         return FALLBACK_STATS.commitRepos;
       }),
@@ -834,7 +809,7 @@ function languageMetricValueSegments(
   ];
 }
 
-function monthlyCommitMetricValueSegments(
+function recentCommitMetricValueSegments(
   count,
   percentage,
   percentageWidth,
@@ -1050,7 +1025,7 @@ function metricLines(stats) {
           METRIC_BAR_WIDTH,
           "@",
         ),
-        ...monthlyCommitMetricValueSegments(
+        ...recentCommitMetricValueSegments(
           repo.count,
           percentage,
           percentageWidth,
@@ -1181,7 +1156,7 @@ ${frameCss(frames.length)}
 
   return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" viewBox="0 0 ${svgWidth} ${height}" width="${svgWidth}" height="${height}">
 <title id="title">Tobias Livadariu terminal profile</title>
-<desc id="desc">ASCII terminal profile with animated island art, tobifetch details, language distribution, and current-month public commit distribution.</desc>
+<desc id="desc">ASCII terminal profile with animated island art, tobifetch details, language distribution, and public commit distribution over the last ${COMMIT_WINDOW_DAYS} days.</desc>
 <style>${css}</style>
 <rect width="100%" height="100%" fill="${PALETTE.bg}" />
 ${elements.join("")}
