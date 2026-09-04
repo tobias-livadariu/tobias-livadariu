@@ -51,8 +51,16 @@ pinned to a commit rather than a tag: a moved tag is how trusted actions are
 compromised in practice, and a SHA cannot be repointed.
 
 Do not add an action to this job without pinning it to a SHA, and prefer a `run:`
-step over an action where the two are equivalent. `.github/dependabot.yml` opens
-pull requests to move the pins forward, so pinning does not mean going stale.
+step over an action where the two are equivalent.
+
+Pins are moved forward automatically rather than by hand. `.github/dependabot.yml`
+holds every routine bump for a seven day cooldown, on the reasoning that a
+compromised release of a popular action is normally caught within a day or two,
+so waiting a week means this repository is never among the first to run one.
+Security updates are exempt from the cooldown, so a fix for a disclosed
+vulnerability still arrives immediately. `dependabot-auto-merge.yml` then renders
+offline to check the bump did not break anything and merges it, so nothing
+depends on someone reviewing a queue of pull requests.
 
 ## Private commit counts need PROFILE_TOKEN
 

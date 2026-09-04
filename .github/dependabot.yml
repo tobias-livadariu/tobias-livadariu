@@ -1,19 +1,25 @@
 version: 2
 
 updates:
-  # The workflow pins its actions to commit SHAs so that a moved version tag
-  # cannot repoint them at hostile code. The cost of pinning is that a fix
-  # published upstream never arrives on its own, which would leave a known
-  # vulnerability sitting in a job that holds PROFILE_TOKEN.
+  # The render job pins its actions to commit SHAs so a moved version tag cannot
+  # repoint them at hostile code. Pinning alone would freeze the job on whatever
+  # commit it started with, so Dependabot moves the pins forward.
   #
-  # Dependabot closes that gap: it watches the actions this repository uses and
-  # opens a pull request moving each pin to the new commit, with the release
-  # notes attached. Updates stay immutable and become a thing to review rather
-  # than something that changes underneath the workflow.
+  # The cooldown is the point. A compromised release of a popular action is
+  # normally caught within a day or two of publication, so adopting nothing
+  # until it has been public for a week means this repository is never among the
+  # first to run it. Security updates are exempt from the cooldown, so a fix for
+  # a disclosed vulnerability still arrives immediately: the delay applies to
+  # routine version bumps, not to patches.
+  #
+  # Updates merge on their own once the render smoke test passes, because a pull
+  # request nobody has time to read is just a stale pin with extra steps.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "chore"
     labels:

@@ -1,0 +1,51 @@
+name: Dependabot auto-merge
+
+# Pins only stay useful if something moves them, and reviewing action bumps by
+# hand is not going to happen. Dependabot holds each update for the cooldown set
+# in dependabot.yml, this checks the render still works with the proposed pin,
+# and the pull request then merges itself.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    # Runs for nothing but Dependabot's own pull requests on this repository.
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.repository == 'tobias-livadariu/tobias-livadariu'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # Offline, so this needs no secrets: PROFILE_TOKEN never enters a job
+      # running a version of the workflow that nothing has vouched for yet.
+      - name: Render offline
+        run: node scripts/render-profile-readme.mjs
+        env:
+          PROFILE_README_OFFLINE: "1"
+
+  merge:
+    # The gate. `needs` means this job does not start unless the render above
+    # succeeded, so a bump that breaks the renderer is never merged. A plain
+    # merge is used rather than `--auto`, which would need the repository's
+    # auto-merge setting turned on and, with no branch protection here, would
+    # not wait for the check anyway.
+    needs: verify
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Merge
+        run: gh pr merge --squash --delete-branch "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
