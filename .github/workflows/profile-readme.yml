@@ -28,7 +28,7 @@ jobs:
       - name: Checkout
         # Pinned to a commit, not a tag. A moved tag is how the widely used
         # actions get compromised in practice; a SHA cannot be repointed.
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # No setup-node. The runner image already ships a current Node, the render
       # uses nothing newer than Array.prototype.at (Node 16.6), and this job
