@@ -37,6 +37,13 @@ jobs:
     # auto-merge setting turned on and, with no branch protection here, would
     # not wait for the check anyway.
     needs: verify
+    # Repeated rather than left to `needs` alone. A skipped dependency skips this
+    # job today, but this job can merge a pull request and holds write on both
+    # contents and pull requests, so it should not be one careless `if: always()`
+    # away from letting an arbitrary author merge their own branch.
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.repository == 'tobias-livadariu/tobias-livadariu'
     runs-on: ubuntu-latest
 
     permissions:
