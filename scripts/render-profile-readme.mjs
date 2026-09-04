@@ -333,14 +333,58 @@ function authHeaders() {
   return headers;
 }
 
-async function githubJson(url) {
-  const response = await fetch(url, { headers: authHeaders() });
+// Statuses worth another go: GitHub answers these to load, not to a bad request.
+const TRANSIENT_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+const RETRY_DELAYS_MS = [500, 1500, 4000];
 
-  if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}: ${url}`);
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Fetches JSON from the GitHub API, retrying transient failures.
+ *
+ * Callers count things, so a request that fails for a passing reason must not
+ * be mistaken for an empty answer: that turns a blip into an undercount of the
+ * user's own activity, reported with no sign anything went wrong. Errors carry
+ * `status` so callers can tell "this repository has no commits" from "this
+ * request did not work".
+ */
+async function githubJson(url) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
+    if (attempt > 0) {
+      await sleep(RETRY_DELAYS_MS[attempt - 1]);
+    }
+
+    let response;
+
+    try {
+      response = await fetch(url, { headers: authHeaders() });
+    } catch (error) {
+      lastError = error;
+      continue;
+    }
+
+    if (response.ok) {
+      return response.json();
+    }
+
+    const error = new Error(`${response.status} ${response.statusText}: ${url}`);
+    error.status = response.status;
+
+    // Rate limiting arrives as a 403 with nothing left in the budget.
+    const rateLimited =
+      response.status === 403 &&
+      response.headers.get("x-ratelimit-remaining") === "0";
+
+    if (!TRANSIENT_STATUSES.has(response.status) && !rateLimited) {
+      throw error;
+    }
+
+    lastError = error;
   }
 
-  return response.json();
+  throw lastError;
 }
 
 async function fetchRepos() {
@@ -371,7 +415,11 @@ async function fetchLanguageStats(repos) {
       }
     } catch {
       if (repo.language) {
-        totals.set(repo.language, (totals.get(repo.language) ?? 0) + Math.max(1, repo.size ?? 1));
+        // repo.size is in kilobytes while the languages endpoint reports bytes.
+        // Adding it raw let a repo whose language call failed count for about a
+        // thousandth of its real weight.
+        const bytes = Math.max(1, (repo.size ?? 1) * 1024);
+        totals.set(repo.language, (totals.get(repo.language) ?? 0) + bytes);
       }
     }
   }
@@ -440,9 +488,16 @@ async function fetchRecentCommitStats(repos) {
         commits = await githubJson(
           `https://api.github.com/repos/${repo.full_name}/commits?${params}`,
         );
-      } catch {
-        // Empty repository, or a default branch that no longer resolves.
-        break;
+      } catch (error) {
+        // A repository with no commits answers 409 and a missing branch 404;
+        // both legitimately mean "nothing here". Anything else would make the
+        // count too low, so surface it instead of quietly reporting fewer
+        // commits than were actually made.
+        if (error.status === 409 || error.status === 404) {
+          break;
+        }
+
+        throw error;
       }
 
       for (const commit of commits) {
