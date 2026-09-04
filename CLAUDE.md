@@ -42,6 +42,18 @@ every page load. Rebuild the subset with `npm run build:font` if the typeface
 changes, and keep it covering all of `U+0020-007E` so daily-changing stats text
 can never hit a missing glyph.
 
+## The workflow's action chain is deliberately short and pinned
+
+The render job holds `PROFILE_TOKEN`, which can read every private repository
+this account owns, and any action running earlier in that job can reach what the
+render step executes. So the job uses exactly one action, `actions/checkout`,
+pinned to a commit rather than a tag: a moved tag is how trusted actions are
+compromised in practice, and a SHA cannot be repointed.
+
+Do not add an action to this job without pinning it to a SHA, and prefer a `run:`
+step over an action where the two are equivalent. `.github/dependabot.yml` opens
+pull requests to move the pins forward, so pinning does not mean going stale.
+
 ## Private commit counts need PROFILE_TOKEN
 
 The `{PRIVATE}` row aggregates commits across private repositories and never

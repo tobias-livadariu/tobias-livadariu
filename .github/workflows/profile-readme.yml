@@ -30,10 +30,12 @@ jobs:
         # actions get compromised in practice; a SHA cannot be repointed.
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: "22"
+      # No setup-node. The runner image already ships a current Node, the render
+      # uses nothing newer than Array.prototype.at (Node 16.6), and this job
+      # holds PROFILE_TOKEN: an action that runs before the render step supplies
+      # the very binary that executes it, so the shortest chain is the safest
+      # one. If a future change needs a specific Node version, add the action
+      # back pinned to a SHA rather than reaching for a tag.
 
       # No install step: the render replays the committed ASCII frame cache and
       # runs on Node's standard library alone. playwright-core is a dev-only
