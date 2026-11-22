@@ -1,0 +1,20 @@
+# Implement Tobias’s playable GitHub profile terminal
+
+Work in the GitHub profile repo `/Users/tobias/repos/tobias-livadariu` or its current checkout. Implement the plan in this repository. Tobias chose **Mojang’s official Minecraft Classic first for recognition, followed by 3D Pinball for Windows – Space Cadet for its decompilation story**. Preserve the profile’s hiring value, visual structure and colored numbered gutter. The first visitor action should lead straight from a convincing ASCII game preview to a real playable game.
+
+Read these in order before editing:
+
+1. [Experience plan](01-experience.md) for the visitor journey and visual direction.
+2. [Feasibility research](02-feasibility.md), especially the final Minecraft/Terraria comparison, for the browser tests, source links, measured payloads and remaining uncertainties.
+3. [Implementation contract](03-implementation-contract.md) for repository touchpoints, terminal behavior, static hosting and acceptance evidence.
+4. Root `CLAUDE.md`, `scripts/README.md`, the current render workflow, renderer and config. Inspect the two portfolio transition files named in the contract if the sibling checkout is available.
+
+Start with the highest-risk slice. Mount official Classic in a terminal-sized static page under a project-site subpath. Verify actual gameplay, pointer lock, keyboard focus and return. Test whether the game remains usable on a phone. Keep a direct upstream link accessible if embedding fails. Then join the playable page and the README with one intentional link. Extend the existing SVG renderer with a returned repository prompt, a working launch command and an original ASCII terrain preview. Add the restrained glass-shard reveal and a complete reduced-motion frame. Add Space Cadet as the next playable games/ entry after the featured experience works. Use the upstream port for the game itself. Keep both game payloads out of the profile visit. Keep the daily statistics workflow dependency-free.
+
+Use the established font and gutter geometry across both surfaces. Make the launch frame and destination feel like adjacent moments of the same terminal session. A visitor who never plays should still get the full current profile. Implement the local command dictionary and keyboard-accessible controls from the contract. Preserve the distinction between Tobias’s integration, Mojang’s game and the community’s pinball decompilation. A new engine, general-purpose shell or game-data mirror would expand this assignment.
+
+Verify each acceptance item in the contract using actual rendering, request traces and game input. Use the same offline baseline for comparisons. Build a deployable Pages artifact, ensure the target URL is valid in the intended deployment, and follow the user’s publication authorization. If deployment is outside the current authorization, leave a locally working, reviewable change and identify precisely what still needs a live check. Do not mark a reachable URL or a loaded canvas as a successful playthrough.
+
+**After implementing, use two independent auditor agents.** Give them the diff, plan and evidence with permission to inspect and test. Ask the first to verify correctness, factual attribution, terminal behavior, iframe boundaries, CI privileges, payload measurements and regression coverage. Ask the second to inspect actual before/after images and the playable interaction at desktop and phone widths, including first paint, mid-shard, final still, reduced motion and the transition from README to game. Ask where the result looks pasted on, what a hiring reviewer sees first and whether the play invitation is discoverable without explanation. Have both return concrete observations, severity and reproduction steps. Fix meaningful findings and rerun the affected checks.
+
+Deliver the working implementation, a short explanation of the visitor experience, measured download and timing deltas, preview evidence and the auditors’ findings and resolutions. State any remaining upstream, device or publication limits.
