@@ -12,7 +12,7 @@ export const games = new Map([
   [featured, {
     title: "Minecraft Classic", url: "https://classic.minecraft.net/",
     credit: "Mojang", source: "https://www.minecraft.net/en-us/article/embrace-past-minecraft-classic",
-    controls: "Click the world to capture the mouse. WASD to move, Esc to release.",
+    controls: "Click to capture the mouse. WASD moves, left click breaks or builds, right click switches between them, Esc releases.",
   }],
   ["space-cadet", {
     title: "3D Pinball for Windows – Space Cadet", url: "https://pinball.alula.me/",

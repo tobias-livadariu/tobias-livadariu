@@ -68,10 +68,27 @@ function launch(id) {
   frame.title = game.title;
   frame.src = game.url;
   screen.classList.toggle("pinball", id === "space-cadet");
+  // Focus once the game document exists. Focus given before load did not
+  // carry into the game: Space Cadet then received no keys at all.
+  frame.addEventListener("load", () => {
+    if (document.activeElement === frame || document.activeElement === document.body) focusGame();
+  });
   byId("screen").replaceChildren(frame);
-  frame.focus({preventScroll:true});
   player.scrollIntoView({ block: "nearest" });
 }
+// Space Cadet cancels mousedown, so clicking it can never move focus into the
+// frame. Hand focus over from the parent instead. Re-focusing an iframe the
+// parent already treats as focused is a no-op, hence the blur.
+function focusGame() {
+  const frame = byId("screen").querySelector("iframe");
+  if (!frame) return;
+  frame.blur();
+  frame.focus({ preventScroll: true });
+}
+// A click on the page around the player otherwise strands focus on the body.
+document.addEventListener("pointerup", () => {
+  if (active && document.activeElement === document.body) focusGame();
+});
 function go(id) {
   location.hash = "play/" + id;
 }
@@ -104,15 +121,21 @@ form.onsubmit = event => {
     return;
   }
   print(span("% ", "dim"), raw);
-  if (extra.length) print("Too many arguments.");
-  else if (cmd === "help" && !arg) print("pwd   ls [path]   cd [path]   /games/" + featured);
-  else if (cmd === "pwd" && !arg) print(cwd);
-  else if (cmd === "ls" || cmd === "cd") {
+  const run = cwd === "/games" ? "./" : "./games/";
+  if (!["help", "pwd", "ls", "cd"].includes(cmd)) {
+    if (!cmd.includes("/")) print("Unknown command: " + cmd + ". Type help.");
+    else if (file === "/" || file === "/games") print("Is a directory: " + file);
+    else if (file.startsWith("/games/") && games.has(id)) print("Games take no arguments.");
+    else print("No such file: " + file);
+  } else if (extra.length || (arg && cmd !== "ls" && cmd !== "cd")) print("Too many arguments.");
+  else if (cmd === "help") print("pwd   ls [path]   cd [path]   " + run + featured);
+  else if (cmd === "pwd") print(cwd);
+  else {
     const dest = cmd === "ls" && !arg ? cwd : path;
     if (dest !== "/" && dest !== "/games") print("No such directory: " + dest);
     else if (cmd === "cd") cwd = dest;
     else print(dest === "/" ? "games/" : [...games.keys()].join("   "));
-  } else print("Unknown command. Type help.");
+  }
   prompt();
 };
 for (const [id, game] of games) {
