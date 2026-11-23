@@ -40,12 +40,31 @@ async function branchName() {
   } catch { return null; }
 }
 
+// Experimental Mermaid block, rendered with the same library GitHub uses.
+const STARFIELD = path.join(ROOT, "experiments/mermaid-hover/starfield.mmd");
+const MERMAID = "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";
+const exists = file => fs.access(file).then(() => true, () => false);
+async function extraPage(theme) {
+  const source = await fs.readFile(STARFIELD, "utf8");
+  const bg = theme === "dark" ? "#0d1117" : "#ffffff";
+  return `<!doctype html><html><meta charset="utf-8"><body style="margin:0;background:${bg}">
+<pre class="mermaid" id="src"></pre>
+<script type="module">
+import mermaid from "${MERMAID}";
+document.getElementById("src").textContent = ${JSON.stringify(source).replaceAll("<", "\\u003c")};
+mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
+await mermaid.run({ querySelector: "#src" });
+parent.postMessage(document.documentElement.scrollHeight, "*");
+</script></body></html>`;
+}
+
 async function page() {
   const readme = await fs.readFile(path.join(ROOT, "README.md"), "utf8");
   const markup = readme.split("\n").find(line => line.includes("profile-terminal.v"));
   if (!markup) throw new Error("README.md has no profile image line");
   const local = markup.replaceAll(ARCADE_URL, SUBPATH).replaceAll('"./assets/', '"/assets/');
   const still = (local.match(/srcset="([^"]+)"/) || [])[1];
+  const extra = await exists(STARFIELD);
   const branch = await branchName();
   const onGithub = branch
     ? `<a href="https://github.com/tobias-livadariu/tobias-livadariu/blob/${branch.split("/").map(encodeURIComponent).join("/")}/README.md">this branch on GitHub</a> (pushed version)`
@@ -66,14 +85,16 @@ main{margin:24px auto;padding:0 16px;width:var(--w,896px);max-width:100%;box-siz
 .readme{border:1px solid var(--line);border-radius:6px;padding:24px;background:var(--box)}
 .readme img{max-width:100%;box-sizing:content-box}
 .note{color:var(--muted);font-size:12px;margin-top:12px}
+#extra iframe{display:block;width:100%;border:0;margin-top:16px}
 </style>
 <header>
   <strong>Profile preview</strong>
   <div class="group"><span>Page</span><button data-theme="light" aria-pressed="true">Light</button><button data-theme="dark">Dark</button></div>
   <div class="group"><span>Width</span><button data-w="896px" aria-pressed="true">Desktop</button><button data-w="600px">Narrow</button><button data-w="390px">Phone</button></div>
   <div class="group"><span>Motion</span><button id="still" aria-pressed="false">Reduced (still)</button><button id="replay">Replay</button></div>
+  ${extra ? '<div class="group"><span>Experiment</span><button id="starfield" aria-pressed="false">Mermaid starfield</button></div>' : ""}
 </header>
-<main><div class="readme" id="readme">${local}</div>
+<main><div class="readme"><div id="readme">${local}</div><div id="extra"></div></div>
 <p class="note">Image markup comes from README.md; only its link points here instead of GitHub Pages. Widths approximate GitHub's profile column. ${onGithub}</p></main>
 <script>
 const readme=document.getElementById("readme"),original=readme.innerHTML;
@@ -88,6 +109,13 @@ function render(){const t="?t="+Date.now();let html=original.replace(/(src(?:set
   readme.innerHTML=html}
 still.onclick=()=>{isStill=!isStill;still.setAttribute("aria-pressed",isStill);render()};
 document.getElementById("replay").onclick=render;
+// Mermaid renders in its own frame on GitHub too, so mirror that here.
+const star=document.getElementById("starfield"),extra=document.getElementById("extra");
+function frame(){const on=star?.getAttribute("aria-pressed")==="true";extra.replaceChildren();if(!on)return;
+  const f=document.createElement("iframe");f.title="Mermaid starfield";f.src="/extra?theme="+(document.documentElement.dataset.theme||"light");
+  addEventListener("message",e=>{if(e.source===f.contentWindow&&typeof e.data==="number")f.style.height=e.data+"px"});extra.append(f)}
+if(star)star.onclick=()=>{star.setAttribute("aria-pressed",star.getAttribute("aria-pressed")!=="true");frame()};
+document.querySelectorAll("[data-theme]").forEach(b=>b.addEventListener("click",frame));
 </script>
 </html>`;
 }
@@ -97,7 +125,10 @@ const server = http.createServer(async (req, res) => {
   const pathname = decodeURIComponent(url.pathname);
   try {
     let file;
-    if (pathname === "/") {
+    if (pathname === "/extra") {
+      res.writeHead(200, { "content-type": TYPES[".html"], "cache-control": "no-store" });
+      return res.end(await extraPage(url.searchParams.get("theme")));
+    } else if (pathname === "/") {
       res.writeHead(200, { "content-type": TYPES[".html"], "cache-control": "no-store" });
       return res.end(await page());
     } else if (pathname.startsWith("/assets/")) {
