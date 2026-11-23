@@ -4,7 +4,11 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "17 9 * * *"
+  # Main only. A feature branch touching the renderer would otherwise get a bot
+  # commit pushed onto it, rejecting the author's next push. It would also run
+  # unreviewed branch code with PROFILE_TOKEN. Branches merge in and render then.
   push:
+    branches: [main]
     paths:
       - "scripts/render-profile-readme.mjs"
       - "scripts/arcade-art.mjs"
@@ -24,6 +28,8 @@ permissions:
 
 jobs:
   render:
+    # Also stops a manual run dispatched from a branch from committing to it.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
