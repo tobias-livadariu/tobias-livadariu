@@ -67,3 +67,12 @@ block-beta
   columns 4
   u1[" "] u2[" "] u3[" "] u4[" "]
 ```
+
+## 8. Repository SVG as a label background
+
+```mermaid
+%%{init: {"themeCSS": ".node foreignObject div{background:url(https://raw.githubusercontent.com/tobias-livadariu/tobias-livadariu/tliv/drastic-readme-changes/assets/profile-terminal.v15.still.svg) no-repeat 0 0/400px auto !important;min-height:60px} .node rect{fill:#0d1117 !important}"}}%%
+block-beta
+  columns 2
+  v1["        "] v2["        "]
+```
