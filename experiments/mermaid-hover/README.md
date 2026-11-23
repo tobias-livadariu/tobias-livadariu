@@ -48,3 +48,22 @@ block-beta
   s9[" "] s10[" "] s11[" "] s12[" "] s13[" "] s14[" "] s15[" "] s16[" "]
   s17[" "] s18[" "] s19[" "] s20[" "] s21[" "] s22[" "] s23[" "] s24[" "]
 ```
+
+## 6. Repository SVG as the diagram background, hover grid on top
+
+```mermaid
+%%{init: {"themeCSS": "&{background:url(https://raw.githubusercontent.com/tobias-livadariu/tobias-livadariu/tliv/drastic-readme-changes/assets/profile-terminal.v15.still.svg) no-repeat center top/100% auto} .node rect{fill:transparent !important;stroke:transparent !important;transition:fill 1.5s ease-out} .node:hover rect{fill:#e3cf65 !important;transition:none}"}}%%
+block-beta
+  columns 8
+  t1[" "] t2[" "] t3[" "] t4[" "] t5[" "] t6[" "] t7[" "] t8[" "]
+  t9[" "] t10[" "] t11[" "] t12[" "] t13[" "] t14[" "] t15[" "] t16[" "]
+```
+
+## 7. Same background through a plain svg selector
+
+```mermaid
+%%{init: {"themeCSS": "svg{background:url(https://raw.githubusercontent.com/tobias-livadariu/tobias-livadariu/tliv/drastic-readme-changes/assets/profile-terminal.v15.still.svg) no-repeat center top/100% auto} .node rect{fill:transparent !important;stroke:transparent !important}"}}%%
+block-beta
+  columns 4
+  u1[" "] u2[" "] u3[" "] u4[" "]
+```
