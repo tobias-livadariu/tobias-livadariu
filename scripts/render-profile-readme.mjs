@@ -6,7 +6,9 @@ import {
   imageAtlasToAsciiFrames,
 } from "./ascii-image-pipeline.mjs";
 import { STATIC_ASCII_PROFILES } from "./ascii-image-profiles.mjs";
-import { PROFILE_SVG_PATH } from "./profile-readme.config.mjs";
+import { featured, palette as PALETTE, gutterColors as GUTTER_COLOR_CYCLE } from "../arcade/profile.mjs";
+import { terrainRows, revealShards } from "./arcade-art.mjs";
+import { PROFILE_SVG_PATH, PROFILE_STILL_PATH, ARCADE_URL } from "./profile-readme.config.mjs";
 import {
   ASCII_FRAMES_CACHE_PATH,
   decodeFrames,
@@ -38,22 +40,6 @@ const IOSEVKA_REGULAR_PATH = path.join(
   "generated",
   "iosevka-term-regular.ascii.subset.woff2",
 );
-
-const PALETTE = {
-  bg: "#0d1117",
-  fg: "#c5c9c5",
-  fgBright: "#dcd7ba",
-  fgDim: "#a6a69c",
-  comment: "#727169",
-  separator: "#5e6173",
-  pink: "#fb7da7",
-  mint: "#76c5a4",
-  yellow: "#e3cf65",
-  orange: "#fdad5d",
-  lavender: "#af98e6",
-  cyan: "#51c7da",
-};
-
 
 const LANGUAGE_COLORS = {
   TypeScript: "#51c7da",
@@ -805,15 +791,6 @@ function pct(value, total) {
   return `${((value / Math.max(1, total)) * 100).toFixed(1)}%`;
 }
 
-const GUTTER_COLOR_CYCLE = [
-  PALETTE.yellow,
-  PALETTE.orange,
-  PALETTE.pink,
-  PALETTE.lavender,
-  PALETTE.cyan,
-  PALETTE.mint,
-];
-
 function gutterColor(lineNumber) {
   return GUTTER_COLOR_CYCLE[(lineNumber - 1) % GUTTER_COLOR_CYCLE.length];
 }
@@ -1284,7 +1261,7 @@ function metricLabelSegments(repo, width, lineColor) {
   ];
 }
 
-function renderProfileStream(elements, frames, stats) {
+function renderProfileStream(elements, frames, stats, animated) {
   const bodyX = HORIZONTAL_PADDING;
   const contentX = bodyX + GUTTER_WIDTH;
   const artX = contentX;
@@ -1321,6 +1298,8 @@ function renderProfileStream(elements, frames, stats) {
   }
   y = fetchFirstY + ISLAND_ROWS * LINE_HEIGHT;
 
+  if (animated) elements.push(revealShards(contentX, fetchFirstY));
+  elements.push('<g class="settle">');
   for (const infoRow of info) {
     if (infoRow.length > 0) {
       maxInfoChars = Math.max(maxInfoChars, segmentsCharLength(infoRow));
@@ -1342,24 +1321,40 @@ function renderProfileStream(elements, frames, stats) {
     y += LINE_HEIGHT;
   }
 
+  elements.push("</g>");
+  function appendRow(segments) {
+    pushLine(elements, lineNumber++, y, segments, bodyX);
+    y += LINE_HEIGHT;
+  }
+  appendRow([]);
+  const launchLine = lineNumber;
+  appendRow(promptSegments("repos/tobias-livadariu", "main"));
+  appendRow(commandSegments("./games/" + featured));
+  const terrainY = y;
+  const fullTerrain = terrainRows(true);
+  const artPitch = 9;
+  const artLineCount = Math.ceil(fullTerrain.length * artPitch / LINE_HEIGHT);
+  for (let i = 0; i < artLineCount; i++) appendRow([]);
+  const scenes = [["build-after", fullTerrain]];
+  if (animated) scenes.unshift(["build-before", terrainRows(false)]);
+  for (const [className, rows] of scenes) {
+    elements.push(`<g class="${className}">`);
+    rows.forEach((segments, i) => elements.push(textElement({ x: contentX, y: terrainY + i*artPitch, segments, size: 12 })));
+    elements.push("</g>");
+  }
+  appendRow([{text: "[ Play Minecraft Classic > ]", color: PALETTE.mint}]);
   const islandSectionWidth = GUTTER_WIDTH + ISLAND_COLS * CHAR_WIDTH;
   const aboutSectionWidth = GUTTER_WIDTH + maxInfoChars * CHAR_WIDTH;
   const metricsSectionWidth = GUTTER_WIDTH + maxMetricsChars * CHAR_WIDTH;
   const contentWidth = Math.max(islandSectionWidth, aboutSectionWidth, metricsSectionWidth);
 
-  return { endY: y, contentWidth };
+  return { endY: y, contentWidth, launchLine };
 }
 
-async function buildSvg() {
-  const [fontData, frames, stats] = await Promise.all([
-    fs.readFile(IOSEVKA_REGULAR_PATH),
-    loadIslandFrames(ISLAND_COLS, ISLAND_ROWS),
-    fetchProfileStats(),
-  ]);
-  const fontBase64 = fontData.toString("base64");
+function buildSvg(fontBase64, frames, stats, animated) {
   const elements = [];
 
-  const { endY, contentWidth } = renderProfileStream(elements, frames, stats);
+  const { endY, contentWidth, launchLine } = renderProfileStream(elements, frames, stats, animated);
 
   const svgWidth = Math.ceil(HORIZONTAL_PADDING + contentWidth + HORIZONTAL_PADDING);
   const height = Math.ceil(endY - LINE_HEIGHT + FONT_SIZE + BOTTOM_PADDING);
@@ -1382,32 +1377,56 @@ svg {
   text-rendering: geometricPrecision;
   shape-rendering: crispEdges;
 }
-${frameCss(frames.length)}
+.build-before text,.build-after text{font-size:12px}
+${animated ? `${frameCss(frames.length)}
+.island-frame-0{opacity:1}
+.shard,.build-before{opacity:0}
+@media (prefers-reduced-motion:no-preference){
+.shard{fill:#18262b;stroke:#526366;stroke-width:.7;transform-box:fill-box;transform-origin:center;animation:fracture 440ms ease-out backwards}
+@keyframes fracture{0%{opacity:.8}45%{opacity:.62}100%{opacity:0;transform:translate(4px,5px) scale(.56)}}
+.settle{animation:settle 660ms ease-out}
+@keyframes settle{from{opacity:.68}to{opacity:1}}
+.build-before{animation:unbuilt 3s steps(1,end) 1}
+.build-after{animation:placed 3s steps(1,end) 1}
+@keyframes unbuilt{0%{opacity:1}70%,100%{opacity:0}}
+@keyframes placed{0%{opacity:0}70%,100%{opacity:1}}
+}
+@media (prefers-reduced-motion:reduce){.island-frame{animation:none}}` : ""}
 `;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" viewBox="0 0 ${svgWidth} ${height}" width="${svgWidth}" height="${height}">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" viewBox="0 0 ${svgWidth} ${height}" width="${svgWidth}" height="${height}">
 <title id="title">Tobias Livadariu terminal profile</title>
-<desc id="desc">ASCII terminal profile with animated island art, tobifetch details, language distribution, and public commit distribution over the last ${COMMIT_WINDOW_DAYS} days.</desc>
+<desc id="desc">ASCII terminal profile with animated island art, tobifetch details, language distribution, and public commit distribution over the last ${COMMIT_WINDOW_DAYS} days. Launch Minecraft Classic in the playable terminal.</desc>
 <style>${css}</style>
 <rect width="100%" height="100%" fill="${PALETTE.bg}" />
 ${elements.join("")}
 </svg>
 `;
+  return { svg, launchLine };
 }
 
 async function main() {
-  const svg = await buildSvg();
+  const [fontData, frames, stats] = await Promise.all([
+    fs.readFile(IOSEVKA_REGULAR_PATH),
+    loadIslandFrames(ISLAND_COLS, ISLAND_ROWS),
+    fetchProfileStats(),
+  ]);
+  const fontBase64 = fontData.toString("base64");
+  const { svg, launchLine } = buildSvg(fontBase64, frames, stats, true);
+  const still = buildSvg(fontBase64, frames.slice(0, 1), stats, false);
   await fs.writeFile(OUTPUT_PATH, svg, "utf8");
-  await syncReadmeImagePath();
+  await fs.writeFile(path.join(ROOT, PROFILE_STILL_PATH), still.svg, "utf8");
+  await syncReadmeImagePath(launchLine);
   console.log(`Wrote ${path.relative(ROOT, OUTPUT_PATH)}`);
 }
 
-async function syncReadmeImagePath() {
+async function syncReadmeImagePath(launchLine) {
   const readme = await fs.readFile(README_PATH, "utf8");
   const imageSrc = PROFILE_SVG_PATH.startsWith("./") ? PROFILE_SVG_PATH : `./${PROFILE_SVG_PATH}`;
-  const imageMarkup = `<img src="${imageSrc}" width="100%" alt="ASCII terminal profile for Tobias Livadariu" />`;
+  const url = `${ARCADE_URL}?line=${launchLine}#play/${featured}`;
+  const imageMarkup = `<a href="${url}"><picture><source media="(prefers-reduced-motion: reduce)" srcset="./${PROFILE_STILL_PATH}" /><img src="${imageSrc}" width="100%" alt="Tobias Livadariu’s ASCII terminal profile. Play Minecraft Classic in the interactive terminal." /></picture></a>`;
   const nextReadme = readme.replace(
-    /<img src="[^"]*profile-terminal\.v\d+\.svg" width="100%" alt="ASCII terminal profile for Tobias Livadariu" \/>/,
+    /^(?:<a href="[^"]*">)?(?:<picture><source [^>]*>)?<img src="[^"]*profile-terminal\.v\d+\.svg" width="100%" alt="[^"]*" \/>(?:<\/picture>)?(?:<\/a>)?$/m,
     imageMarkup,
   );
 

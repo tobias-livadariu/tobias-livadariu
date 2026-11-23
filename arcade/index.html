@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Playable terminal · Tobias Livadariu</title>
+<link rel="stylesheet" href="./terminal.css">
+<main aria-label="Tobias Livadariu’s playable terminal">
+  <nav><a href="https://github.com/tobias-livadariu">github / tobias-livadariu</a></nav>
+  <div id="transcript" role="log" aria-label="Terminal history" aria-live="polite"></div>
+  <section id="player" aria-label="Game player" hidden>
+    <div class="player-actions"><button id="leave">Return to terminal</button><a id="direct">Open original player</a></div>
+    <p class="touch">Gameplay requires a keyboard and mouse.</p>
+    <div id="screen"></div>
+    <div class="caption"><span id="controls"></span><a id="credit"></a></div>
+  </section>
+  <div id="shell" hidden>
+    <form autocomplete="off"><label for="command">%</label><input id="command" aria-label="Terminal command" spellcheck="false" autocapitalize="off" maxlength="256" placeholder="Type help"></form>
+    <div class="launchers" aria-label="Launch game"></div>
+  </div>
+  <noscript><p>Play at the original site.</p><a href="https://classic.minecraft.net/">Minecraft Classic</a> · <a href="https://pinball.alula.me/">Space Cadet</a></noscript>
+</main>
+<script type="module" src="./terminal.mjs"></script>
+</html>

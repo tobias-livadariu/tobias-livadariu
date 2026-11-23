@@ -158,3 +158,14 @@ falls through instead of blanking the authorization header.
 | `PROFILE_REBUILD_FRAMES=1` | same as passing `--rebuild-frames` |
 | `PROFILE_ASCII_BROWSER_EXECUTABLE` | explicit browser binary for the rebuild |
 | `PROFILE_ASCII_BROWSER_CHANNEL` | playwright channel for the rebuild (default `chrome`) |
+
+## Playable arcade
+
+Stage the standalone Pages site with `node scripts/build-arcade.mjs`, then
+serve `dist/` with a static HTTP server. Open the root for a prompt, or
+`?line=72#play/minecraft-classic` for the profile entry. The generated README
+supplies the actual line number. Games run on their original sites inside a
+frame mounted only at launch. The build copies just the terminal and subset
+font. The separate arcade-pages workflow deploys that directory on main.
+Choose GitHub Actions as the repository Pages source before deployment, and
+confirm the published URL matches ARCADE_URL in profile-readme.config.mjs.

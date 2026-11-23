@@ -1,0 +1,28 @@
+@font-face{font-family:Iosevka;src:url("./iosevka.woff2") format("woff2");font-display:swap}
+*{box-sizing:border-box}
+body{margin:0;background:#0d1117;color:#c5c9c5;font:1rem/1.4 Iosevka,ui-monospace,Menlo,monospace;font-variant-ligatures:none;font-feature-settings:"zero" 1}
+main{--gutter:7ch;width:min(100%,calc(753px + 2rem));margin:clamp(1rem,6vh,4rem) auto;padding:0 1rem 3rem}
+nav{margin:0 0 2rem 0;padding-left:var(--gutter);font-size:.9rem}
+a,button{color:#76c5a4;text-decoration:underline;text-underline-offset:.24em}
+button{border:0;background:none;font:inherit;cursor:pointer;padding:0}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #51c7da;outline-offset:3px}
+nav a,.caption a{color:#a6a69c}
+.row,form{display:grid;grid-template-columns:var(--gutter) 1fr;align-items:baseline;min-height:1.4em}
+.number{white-space:pre;user-select:none}
+.output{white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.directory{color:#51c7da}.branch{color:#e3cf65}.sigil{color:#76c5a4}.dim,label{color:#a6a69c}
+#player,.launchers{margin-left:var(--gutter)}
+.player-actions,.caption,.launchers{display:flex;flex-wrap:wrap;gap:.5rem 1.6rem;align-items:baseline}
+.player-actions{margin:.9rem 0}.player-actions a{color:#a6a69c}
+iframe{display:block;width:100%;height:clamp(300px,65vh,600px);border:1px solid #5e6173;background:#111820}
+.caption,.touch{margin-top:.7rem;font-size:.9rem}.touch{display:none;color:#e3cf65}
+form{grid-template-columns:var(--gutter) 2ch 1fr}
+form::before{content:attr(data-gutter);white-space:pre;color:var(--line-color)}
+input{font:inherit;background:transparent;border:0;min-width:0;color:#dcd7ba;caret-color:#76c5a4}
+.launchers{margin-top:1rem}.launchers button{padding:.4em 0}
+@media(max-width:600px){main{--gutter:6ch;padding-inline:.65rem}#player{margin-left:0}nav{margin-bottom:1rem}iframe{height:55vh}}
+@media(pointer:coarse),(max-width:600px){.touch{display:block}#controls{display:none}}
+input:focus-visible{outline:none;box-shadow:inset 0 -1px #51c7da}
+
+#screen.pinball{position:relative;aspect-ratio:620/500;overflow:hidden}
+.pinball iframe{position:absolute;inset:0;width:620px;height:500px;transform:scale(var(--scale,1));transform-origin:top left}
