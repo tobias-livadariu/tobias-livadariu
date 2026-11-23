@@ -169,3 +169,14 @@ frame mounted only at launch. The build copies just the terminal and subset
 font. The separate arcade-pages workflow deploys that directory on main.
 Choose GitHub Actions as the repository Pages source before deployment, and
 confirm the published URL matches ARCADE_URL in profile-readme.config.mjs.
+
+## Previewing before a merge
+
+`npm run preview` serves http://127.0.0.1:4173/ using only Node's standard
+library. It embeds README.md's own image line, so the `<picture>`, still source
+and link are what GitHub renders. Toggles switch light/dark page, approximate
+profile widths, the reduced-motion still and an animation replay. Clicking the
+image opens the arcade/ sources at the Pages subpath, so the launch link works
+before Pages is deployed. Render first to preview local changes:
+`PROFILE_README_OFFLINE=1 npm run render`. For GitHub's actual rendering, open
+README.md on the pushed branch; the page links to it.

@@ -5,7 +5,8 @@
   "scripts": {
     "render": "node scripts/render-profile-readme.mjs",
     "build:frames": "node scripts/render-profile-readme.mjs --rebuild-frames",
-    "build:font": "bash scripts/build-font-subset.sh"
+    "build:font": "bash scripts/build-font-subset.sh",
+    "preview": "node scripts/preview-profile.mjs"
   },
   "devDependencies": {
     "playwright-core": "1.60.0"
